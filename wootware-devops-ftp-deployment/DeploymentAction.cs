@@ -2,5 +2,7 @@
 
 public enum DeploymentAction
 {
-    
+    Add,
+    Modify,
+    Delete
 }
