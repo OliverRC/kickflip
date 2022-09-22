@@ -61,7 +61,7 @@ namespace kickflip
                 description: "Does a dry run of the deployment to see what would be done. No changes will be made to the remote server.",
                 getDefaultValue: () => false);
             
-            var deployCommand = new Command("deploy", "Kick your git changes and flip them onto the remote server!");
+            var deployCommand = new Command("deploy", "Kick your git changes and flip them over to that remote server!");
             deployCommand.AddArgument(localPathArgument);
             deployCommand.AddOption(deploymentPathArgument);
             deployCommand.AddOption(hostnameOption);
