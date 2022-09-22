@@ -1,4 +1,6 @@
-﻿namespace wootware_devops_ftp_deployment.Services;
+﻿using kickflip.Models;
+
+namespace kickflip.Services;
 
 public class MarkdownService
 {

@@ -1,4 +1,4 @@
-﻿namespace wootware_devops_ftp_deployment.Utilities;
+﻿namespace kickflip.Utilities;
 
 public static class Utilities
 {

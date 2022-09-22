@@ -1,8 +1,8 @@
-﻿using Renci.SshNet;
+﻿using kickflip.Models;
+using Renci.SshNet;
 using Renci.SshNet.Common;
-using Renci.SshNet.Sftp;
 
-namespace wootware_devops_ftp_deployment.Services;
+namespace kickflip.Services;
 
 public class SftpDeploymentService
 {

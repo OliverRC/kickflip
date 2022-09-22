@@ -1,6 +1,7 @@
-﻿using LibGit2Sharp;
+﻿using kickflip.Models;
+using LibGit2Sharp;
 
-namespace wootware_devops_ftp_deployment.Services;
+namespace kickflip.Services;
 
 public class GitService
 {

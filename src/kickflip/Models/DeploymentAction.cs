@@ -1,4 +1,4 @@
-﻿namespace wootware_devops_ftp_deployment.Models;
+﻿namespace kickflip.Models;
 
 public enum DeploymentAction
 {

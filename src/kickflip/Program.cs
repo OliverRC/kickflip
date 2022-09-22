@@ -8,10 +8,11 @@
 // Future: add comment to a PR in Github with summary of what's action will be taken
 
 using System.CommandLine;
+using kickflip.Services;
 
-namespace wootware_devops_ftp_deployment
+namespace kickflip
 {
-    class Program
+    static class Program
     {
         static async Task<int> Main(string[] args)
         {
