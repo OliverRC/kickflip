@@ -7,10 +7,9 @@
         <Nullable>enable</Nullable>
         <PackAsTool>true</PackAsTool>
         <ToolCommandName>git-deploy</ToolCommandName>
-        <PackageOutputPath>./nupkg</PackageOutputPath>
         <Authors>Oliver Rivett-Carnac</Authors>
         <Title>Kickflip</Title>
-        <Description>Kick those GIT changes to and flip them over to that remote server</Description>
+        <Description>Kick those GIT changes and flip them over to that remote server</Description>
         <PackageLicenseUrl>http://www.wtfpl.net/</PackageLicenseUrl>
     </PropertyGroup>
 
