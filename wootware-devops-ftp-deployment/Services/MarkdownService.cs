@@ -1,6 +1,4 @@
-﻿using System.Text;
-
-namespace wootware_devops_ftp_deployment;
+﻿namespace wootware_devops_ftp_deployment.Services;
 
 public class MarkdownService
 {

@@ -1,4 +1,6 @@
-﻿namespace wootware_devops_ftp_deployment;
+﻿using LibGit2Sharp;
+
+namespace wootware_devops_ftp_deployment.Services;
 
 public class GitService
 {

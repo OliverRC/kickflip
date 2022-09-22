@@ -1,4 +1,4 @@
-﻿namespace wootware_devops_ftp_deployment;
+﻿namespace wootware_devops_ftp_deployment.Models;
 
 public class DeploymentChange
 {

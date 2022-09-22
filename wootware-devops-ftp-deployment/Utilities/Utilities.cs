@@ -1,6 +1,6 @@
-﻿namespace wootware_devops_ftp_deployment;
+﻿namespace wootware_devops_ftp_deployment.Utilities;
 
-public class Utilities
+public static class Utilities
 {
     public static string UrlCombine(string url1, string url2)
     {
