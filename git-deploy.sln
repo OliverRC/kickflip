@@ -1,6 +1,6 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "wootware-devops-ftp-deployment", "wootware-devops-ftp-deployment\wootware-devops-ftp-deployment.csproj", "{1D27BC98-D2C1-4C16-BA63-D09DADF95ECE}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "git-deploy", "src\git-deploy\git-deploy.csproj", "{1D27BC98-D2C1-4C16-BA63-D09DADF95ECE}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

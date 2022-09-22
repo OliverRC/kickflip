@@ -46,20 +46,20 @@ public class GitService
         switch (change.Status)
         {
             case ChangeKind.Added:
-                changes.Add(new DeploymentChange {Action = DeploymentAction.Add, Path = change.Path});
+                changes.Add(new DeploymentChange(DeploymentAction.Add, change.Path));
                 break;
             case ChangeKind.Deleted:
-                changes.Add(new DeploymentChange {Action = DeploymentAction.Delete, Path = change.Path});
+                changes.Add(new DeploymentChange(DeploymentAction.Delete, change.Path));
                 break;
             case ChangeKind.Modified:
-                changes.Add(new DeploymentChange {Action = DeploymentAction.Modify, Path = change.Path});
+                changes.Add(new DeploymentChange(DeploymentAction.Modify, change.Path));
                 break;
             case ChangeKind.Renamed:
-                changes.Add(new DeploymentChange {Action = DeploymentAction.Add, Path = change.Path});
-                changes.Add(new DeploymentChange {Action = DeploymentAction.Delete, Path = change.OldPath});
+                changes.Add(new DeploymentChange(DeploymentAction.Add, change.Path));
+                changes.Add(new DeploymentChange(DeploymentAction.Delete, change.OldPath));
                 break;
             default:
-                throw new ArgumentOutOfRangeException();
+                throw new ArgumentOutOfRangeException(nameof(change.Status), change.Status, "Currently only Added, Deleted, Modified and Renamed are supported");
         }
 
         return changes;
