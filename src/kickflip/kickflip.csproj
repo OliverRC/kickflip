@@ -10,8 +10,9 @@
         <ToolCommandName>git-deploy</ToolCommandName>
         <PackageOutputPath>./nupkg</PackageOutputPath>
         <Authors>Oliver Rivett-Carnac</Authors>
-        <Title>Git-Deploy</Title>
-        <Description>A tool that uses the GIT repository as the basis of changes to make up the deployment.</Description>
+        <Title>Kickflip</Title>
+        <Description>Kick those GIT changes to and flip them over to that remote server</Description>
+        <PackageLicenseUrl>http://www.wtfpl.net/</PackageLicenseUrl>
     </PropertyGroup>
 
     <ItemGroup>
