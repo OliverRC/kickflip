@@ -16,7 +16,6 @@ namespace kickflip
     {
         static async Task<int> Main(string[] args)
         {
-       
             var rootCommand = new RootCommand("Plan and execute deployment to the remote server based on changes made in git since the last release (tag)");
             
             rootCommand.AddCommand(DeployCommand());
@@ -62,7 +61,7 @@ namespace kickflip
                 description: "Does a dry run of the deployment to see what would be done. No changes will be made to the remote server.",
                 getDefaultValue: () => false);
             
-            var deployCommand = new Command("deploy", "Deploy the latest changes (git) to the remote server");
+            var deployCommand = new Command("deploy", "Kick your git changes and flip them onto the remote server!");
             deployCommand.AddArgument(localPathArgument);
             deployCommand.AddOption(deploymentPathArgument);
             deployCommand.AddOption(hostnameOption);
@@ -81,11 +80,11 @@ namespace kickflip
         {
             var gitService = new GitService();
             var deploymentService = new SftpDeploymentService(hostname, port, username, password, deploymentPath);
-            var markdownService = new MarkdownService(deploymentService);
+            var outputService = new OutputService(deploymentService);
             
             var changes = gitService.GetChanges(localPath);
             
-            Console.WriteLine(markdownService.GetChangesOutput(changes));
+            Console.WriteLine(outputService.GetChangesConsole(changes));
             
             deploymentService.DeployChanges(localPath, changes, isDryRun);
         }

@@ -12,7 +12,8 @@ public class GitService
         
         Console.WriteLine($"Repository path: {repo.Info.Path}");
         Console.WriteLine($"Current branch: {repo.Head.FriendlyName}");
-
+        Console.WriteLine();
+        
         var lastTag = GetLastTag(repo, true);
 
         var fromCommit = lastTag?.Target.Peel<Commit>();
@@ -20,10 +21,17 @@ public class GitService
         var fromCommitInfo =
             fromCommit == null ? "<root commit>" : $"\"{fromCommit.Id} {fromCommit.MessageShort}\"";
         var toCommitInfo = $"\"{repo.Head.Tip.Id} {repo.Head.Tip.MessageShort}\"";
-        Console.WriteLine($"Finding diff between {fromCommitInfo} and {toCommitInfo}");
+        Console.WriteLine($"Finding diff between \"{fromCommitInfo}\" and \"{toCommitInfo}\"");
 
         var changes = repo.Diff.Compare<TreeChanges>(fromCommit?.Tree, repo.Head.Tip.Tree);
 
+        if(!changes.Any())
+        {
+            Console.WriteLine("No changes found");
+            return new List<DeploymentChange>();
+        }
+        
+        Console.WriteLine("The following git changes were found:");
         var deploymentChanges = new List<DeploymentChange>();
         foreach (var change in changes)
         {
