@@ -15,10 +15,14 @@ public class SftpDeploymentService
 
     private void Connect()
     {
-        if (!_client.IsConnected)
+        if (_client.IsConnected)
         {
-            _client.Connect();
+            return;
         }
+        
+        Console.WriteLine($"Connecting to remote server {_client.ConnectionInfo.Host}:{_client.ConnectionInfo.Port} with user {_client.ConnectionInfo.Username}");
+        _client.Connect();
+        Console.WriteLine("Connected!");
     }
 
     public string GetAction(DeploymentChange change)
@@ -63,8 +67,7 @@ public class SftpDeploymentService
                 Delete(change, isDryRun);
                 break;
             default:
-                throw new ArgumentOutOfRangeException(nameof(change.Action), change.Action,
-                    "Unknown or unsupported deployment action");
+                throw new ArgumentOutOfRangeException(nameof(change.Action), change.Action, "Unknown or unsupported deployment action");
         }
     }
     
