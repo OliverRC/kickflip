@@ -1,6 +1,7 @@
 bin/
 obj/
 nupkg/
+dist/
 /packages/
 riderModule.iml
 /_ReSharper.Caches/
