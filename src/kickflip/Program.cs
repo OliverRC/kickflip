@@ -28,18 +28,13 @@ namespace kickflip
         {
             var localPathArgument = new Argument<string?>
             (name: "local-path",
-                description: "Local path to the folder containing the git repository. The local path is an absolute path.", parse: result =>
-                {
-                    var path = result.Tokens.Single().Value;
-                    if (Directory.Exists(path)) { return path; }
-                    
-                    result.ErrorMessage = "Path provided does not exist";
-                    return null;
-                });
+                description: "Local path to the folder containing the git repository. The local path is an absolute path.", 
+                getDefaultValue: Directory.GetCurrentDirectory);
 
-            var deploymentPathArgument = new Argument<string?>
-            (name: "deployment-path",
-                description: "Deployment path on the remote server to deploy to. The deployment path is relative to the root of the user account on the remote server.");
+            var deploymentPathArgument = new Option<string?>
+            (name: "--deployment-path",
+                description: "Deployment path on the remote server to deploy to. The deployment path is relative to the root of the user account on the remote server.", 
+                getDefaultValue: () => "/");
             
             var hostnameOption = new Option<string>(
                 name: "--hostname",
@@ -69,7 +64,7 @@ namespace kickflip
             
             var deployCommand = new Command("deploy", "Deploy the latest changes (git) to the remote server");
             deployCommand.AddArgument(localPathArgument);
-            deployCommand.AddArgument(deploymentPathArgument);
+            deployCommand.AddOption(deploymentPathArgument);
             deployCommand.AddOption(hostnameOption);
             deployCommand.AddOption(portOption);
             deployCommand.AddOption(usernameOption);
