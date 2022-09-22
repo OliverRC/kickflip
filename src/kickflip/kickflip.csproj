@@ -6,11 +6,11 @@
         <ImplicitUsings>enable</ImplicitUsings>
         <Nullable>enable</Nullable>
         <PackAsTool>true</PackAsTool>
-        <ToolCommandName>git-deploy</ToolCommandName>
+        <ToolCommandName>kickflip</ToolCommandName>
         <Authors>Oliver Rivett-Carnac</Authors>
         <Title>Kickflip</Title>
         <Description>Kick those GIT changes and flip them over to that remote server</Description>
-        <PackageLicenseUrl>http://www.wtfpl.net/</PackageLicenseUrl>
+        <PackageLicenseExpression>WTFPL</PackageLicenseExpression>
     </PropertyGroup>
 
     <ItemGroup>
