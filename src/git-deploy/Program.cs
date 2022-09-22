@@ -26,8 +26,8 @@ namespace wootware_devops_ftp_deployment
         static Command DeployCommand()
         {
             var localPathArgument = new Argument<string?>
-            (name: "path",
-                description: "Path to the folder containing the git repository", parse: result =>
+            (name: "local-path",
+                description: "Local path to the folder containing the git repository. The local path is an absolute path.", parse: result =>
                 {
                     var path = result.Tokens.Single().Value;
                     if (Directory.Exists(path)) { return path; }
@@ -36,6 +36,10 @@ namespace wootware_devops_ftp_deployment
                     return null;
                 });
 
+            var deploymentPathArgument = new Argument<string?>
+            (name: "deployment-path",
+                description: "Deployment path on the remote server to deploy to. The deployment path is relative to the root of the user account on the remote server.");
+            
             var hostnameOption = new Option<string>(
                 name: "--hostname",
                 description: "Hostname of the remote server"
@@ -46,7 +50,7 @@ namespace wootware_devops_ftp_deployment
                 description: "Port of the remote server",
                 getDefaultValue: () => 22
             );
-            
+
             var usernameOption = new Option<string>(
                 name: "--username",
                 description: "Authentication username for the remote server"
@@ -64,22 +68,23 @@ namespace wootware_devops_ftp_deployment
             
             var deployCommand = new Command("deploy", "Deploy the latest changes (git) to the remote server");
             deployCommand.AddArgument(localPathArgument);
+            deployCommand.AddArgument(deploymentPathArgument);
             deployCommand.AddOption(hostnameOption);
             deployCommand.AddOption(portOption);
             deployCommand.AddOption(usernameOption);
             deployCommand.AddOption(passwordOption);
             deployCommand.AddOption(dryRunOption);
 
-            deployCommand.SetHandler(HandleDeployment!, localPathArgument, hostnameOption, portOption, usernameOption, passwordOption, dryRunOption);
+            deployCommand.SetHandler(HandleDeployment!, localPathArgument, deploymentPathArgument, hostnameOption, portOption, usernameOption, passwordOption, dryRunOption);
 
             return deployCommand;
         }
         
         
-        static void HandleDeployment(string localPath, string hostname, int port, string username, string password, bool isDryRun)
+        static void HandleDeployment(string localPath, string deploymentPath, string hostname, int port, string username, string password, bool isDryRun)
         {
             var gitService = new GitService();
-            var deploymentService = new SftpDeploymentService(hostname, port, username, password);
+            var deploymentService = new SftpDeploymentService(hostname, port, username, password, deploymentPath);
             var markdownService = new MarkdownService(deploymentService);
             
             var changes = gitService.GetChanges(localPath);
