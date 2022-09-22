@@ -25,3 +25,5 @@ jobs:
       run: dotnet test --no-build --verbosity normal
     - name: Pack
       run: dotnet pack -o dist --no-build --verbosity normal
+    - name: Publish
+      run: dotnet nuget push "dist/*.nupkg" --api-key ${{ secrets.NUGET_APIKEY }} --source https://api.nuget.org/v3/index.json
