@@ -7,8 +7,16 @@
 // Future: --filter to allow tag filtering e.g "release-" tags only to be considered.
 // Future: add comment to a PR in Github with summary of what's action will be taken
 
+var isDryRun = false;
+var path = "C:\\Dev\\Playpen\\git-changed-files-experiment";
+
 var gitService = new GitService();
+var deploymentService = new SftpDeploymentService("test", 22, "test", "test");
+var markdownService = new MarkdownService(deploymentService);
 
-var changes = gitService.GetChanges();
+var changes = gitService.GetChanges(path);
 
-var t = 1;
+Console.WriteLine(markdownService.GetChangesOutput(changes));
+
+deploymentService.DeployChanges(path, changes, isDryRun);
+

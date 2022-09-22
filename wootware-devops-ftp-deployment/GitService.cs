@@ -2,9 +2,8 @@
 
 public class GitService
 {
-    public List<DeploymentChange> GetChanges()
+    public List<DeploymentChange> GetChanges(string path)
     {
-        var path = "C:\\Dev\\Playpen\\git-changed-files-experiment";
         // string path = Environment.CurrentDirectory;
         using var repo = new Repository(path);
         
