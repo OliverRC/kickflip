@@ -4,31 +4,35 @@ namespace kickflip.Services;
 
 public class OutputService
 {
-    private readonly SftpDeploymentService _deploymentService;
-
-    public OutputService(SftpDeploymentService deploymentService)
+    private string GetAction(DeploymentChange change)
     {
-        _deploymentService = deploymentService;
+        return change.Action switch
+        {
+            DeploymentAction.Add => "⬆ Upload",
+            DeploymentAction.Modify => "⬆ Upload",
+            DeploymentAction.Delete => "❌ Delete",
+            _ => throw new ArgumentOutOfRangeException(nameof(change.Action), change.Action, "Unknown or unsupported deployment action")
+        };
     }
     
     public string GetChangesMarkdown(List<DeploymentChange> changes)
     {
         var builder = new StringBuilder();
 
-        builder.AppendLine("## Deployment Changes");
+        builder.AppendLine("### 🛹 Kickflip");
         builder.AppendLine();
         
         builder.AppendLine("The following deployment changes are going to be applied");
         builder.AppendLine();
         
-        builder.AppendLine("| Change | Action | File |");
-        builder.AppendLine("|--------|--------|------|");
-
+        var table = new ConsoleTable("Change", "Action", "File");
         foreach (var change in changes)
         {
-            builder.AppendLine($"| {change.Action} | {_deploymentService.GetAction(change)} | {change.Path} |");
+            table.AddRow(change.Action, GetAction(change), change.Path);
         }
         
+        builder.AppendLine(table.ToMarkDownString());
+
         return builder.ToString();
     }
     
@@ -44,7 +48,7 @@ public class OutputService
         var table = new ConsoleTable("Change", "Action", "File");
         foreach (var change in changes)
         {
-            table.AddRow(change.Action, _deploymentService.GetAction(change), change.Path);
+            table.AddRow(change.Action, GetAction(change), change.Path);
         }
         
         builder.AppendLine(table.ToString());

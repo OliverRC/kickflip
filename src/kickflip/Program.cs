@@ -1,4 +1,5 @@
 ﻿using System.CommandLine;
+using System.CommandLine.Invocation;
 
 namespace kickflip
 {
@@ -6,9 +7,12 @@ namespace kickflip
     {
         static async Task<int> Main(string[] args)
         {
-            var rootCommand = new RootCommand("Plan and execute deployment to the remote server based on changes made in git since the last release (tag)");
-            
+            var rootCommand =
+                new RootCommand(
+                    "Plan and execute deployment to the remote server based on changes made in git since the last release (tag)");
+
             rootCommand.AddCommand(DeployCommand());
+            rootCommand.AddCommand(GithubCommand());
 
             return await rootCommand.InvokeAsync(args);
         }
@@ -17,19 +21,21 @@ namespace kickflip
         {
             var localPathArgument = new Argument<string?>
             (name: "local-path",
-                description: "Local path to the folder containing the git repository. The local path is an absolute path.", 
+                description:
+                "Local path to the folder containing the git repository. The local path is an absolute path.",
                 getDefaultValue: Directory.GetCurrentDirectory);
 
             var deploymentPathArgument = new Option<string?>
             (name: "--deployment-path",
-                description: "Deployment path on the remote server to deploy to. The deployment path is relative to the root of the user account on the remote server.", 
+                description:
+                "Deployment path on the remote server to deploy to. The deployment path is relative to the root of the user account on the remote server.",
                 getDefaultValue: () => "/");
-            
+
             var hostnameOption = new Option<string>(
                 name: "--hostname",
                 description: "Hostname of the remote server"
-            ) { IsRequired = true };
-            
+            ) {IsRequired = true};
+
             var portOption = new Option<int>(
                 name: "--port",
                 description: "Port of the remote server",
@@ -39,19 +45,21 @@ namespace kickflip
             var usernameOption = new Option<string>(
                 name: "--username",
                 description: "Authentication username for the remote server"
-            ) { IsRequired = true };
-            
+            ) {IsRequired = true};
+
             var passwordOption = new Option<string>(
                 name: "--password",
                 description: "Authentication password for the remote server"
-            ) { IsRequired = true };
-            
+            ) {IsRequired = true};
+
             var dryRunOption = new Option<bool>(
                 name: "--dry",
-                description: "Does a dry run of the deployment to see what would be done. No changes will be made to the remote server.",
+                description:
+                "Does a dry run of the deployment to see what would be done. No changes will be made to the remote server.",
                 getDefaultValue: () => false);
-            
-            var deployCommand = new Command("deploy", "Kick your git changes and flip them over to that remote server!");
+
+            var deployCommand =
+                new Command("deploy", "Kick your git changes and flip them over to that remote server!");
             deployCommand.AddArgument(localPathArgument);
             deployCommand.AddOption(deploymentPathArgument);
             deployCommand.AddOption(hostnameOption);
@@ -60,26 +68,98 @@ namespace kickflip
             deployCommand.AddOption(passwordOption);
             deployCommand.AddOption(dryRunOption);
 
-            deployCommand.SetHandler(HandleDeployment!, localPathArgument, deploymentPathArgument, hostnameOption, portOption, usernameOption, passwordOption, dryRunOption);
+            deployCommand.SetHandler(HandleDeployment!, localPathArgument, deploymentPathArgument, hostnameOption,
+                portOption, usernameOption, passwordOption, dryRunOption);
 
             return deployCommand;
         }
-        
-        
-        static void HandleDeployment(string localPath, string deploymentPath, string hostname, int port, string username, string password, bool isDryRun)
+
+        static void HandleDeployment(string localPath, string deploymentPath, string hostname, int port,
+            string username, string password, bool isDryRun)
         {
             var gitService = new GitService();
+            var outputService = new OutputService();
             var deploymentService = new SftpDeploymentService(hostname, port, username, password, deploymentPath);
-            var outputService = new OutputService(deploymentService);
+
+            var changes = gitService.GetChanges(localPath);
+
+            Console.WriteLine(outputService.GetChangesConsole(changes));
+
+            deploymentService.DeployChanges(localPath, changes, isDryRun);
+        }
+
+        static Command GithubCommand()
+        {
+            var localPathArgument = new Argument<string?>
+            (name: "local-path",
+                description:
+                "Local path to the folder containing the git repository. The local path is an absolute path.",
+                getDefaultValue: Directory.GetCurrentDirectory);
+            
+            var repositoryOption = new Option<string?>(
+                name: "--repo",
+                description: "The repository where the PR resides. Should be in the format of <owner>/<repository>.",
+                parseArgument: result =>
+                {
+                    var repository = result.Tokens.Single().ToString();
+                    if (repository.Contains("/"))
+                    {
+                        return repository;
+                    }
+
+                    result.ErrorMessage =
+                        "Repository should be in the format of <owner>/<repository>. See the GITHUB_REPOSITORY variable in the GitHub Actions documentation. https://docs.github.com/en/actions/learn-github-actions/environment-variables";
+                    return null;
+                }) {IsRequired = true};
+
+            var refOption = new Option<string?>(
+                name: "--ref",
+                description:
+                "The fully-formed ref of the branch or tag that triggered the workflow run. The ref given is fully-formed for pull requests it is refs/pull/<pr_number>/merge. See the GITHUB_REF variable in the GitHub Actions documentation. https://docs.github.com/en/actions/learn-github-actions/environment-variables",
+                parseArgument: result =>
+                {
+                    var repository = result.Tokens.Single().ToString();
+                    if (repository.Contains("refs/pull/") && repository.Contains("/merge"))
+                    {
+                        return repository;
+                    }
+
+                    result.ErrorMessage = "Ref must be fully formed and in the format refs/pull/<pr_number>/merge";
+                    return null;
+                }) {IsRequired = true};
+
+            var tokenOption = new Option<string>(
+                name: "--token",
+                description:
+                "The Github token or Personal access token to use for authentication. See the GITHUB_TOKEN variable in the GitHub Actions documentation. https://docs.github.com/en/actions/security-guides/automatic-token-authentication"
+            ) {IsRequired = true};
+
+
+            var pullRequestCommand = new Command("pull-request",
+                "Adds a comment to the pull request with the changes that will be deployed to the remote server.");
+            pullRequestCommand.AddAlias("pr");
+            pullRequestCommand.AddArgument(localPathArgument);
+            pullRequestCommand.AddOption(repositoryOption);
+            pullRequestCommand.AddOption(refOption);
+            pullRequestCommand.AddOption(tokenOption);
+            pullRequestCommand.SetHandler(HandleGitubPullRequest!, localPathArgument, repositoryOption, refOption, tokenOption);
+
+            var githubCommand = new Command("github",
+                "Integration with github to allow kickflip to work in your existing Github workflow.");
+            githubCommand.AddCommand(pullRequestCommand);
+
+            return githubCommand;
+        }
+
+        private static async Task HandleGitubPullRequest(string localPath, string repository, string pullRequestReference, string token)
+        {
+            var gitService = new GitService();
+            var gitHubService = new GithubService(token);
+            var outputService = new OutputService();
             
             var changes = gitService.GetChanges(localPath);
-            
-            Console.WriteLine(outputService.GetChangesConsole(changes));
-            
-            deploymentService.DeployChanges(localPath, changes, isDryRun);
+            var comment = outputService.GetChangesMarkdown(changes);
+            await gitHubService.PullRequestCommentChanges(repository, pullRequestReference, comment);
         }
     }
 }
-
-
-

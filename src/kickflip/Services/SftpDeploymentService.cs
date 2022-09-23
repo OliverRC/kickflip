@@ -25,17 +25,6 @@ public class SftpDeploymentService
         _client.Connect();
         Console.WriteLine("Connected!");
     }
-
-    public string GetAction(DeploymentChange change)
-    {
-        return change.Action switch
-        {
-            DeploymentAction.Add => "⬆ Upload",
-            DeploymentAction.Modify => "⬆ Upload",
-            DeploymentAction.Delete => "❌ Delete",
-            _ => throw new ArgumentOutOfRangeException(nameof(change.Action), change.Action, "Unknown or unsupported deployment action")
-        };
-    }
     
     public void DeployChanges(string path, List<DeploymentChange> changes, bool isDryRun)
     {

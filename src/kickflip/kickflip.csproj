@@ -12,13 +12,14 @@
         <Description>Kick those GIT changes and flip them over to that remote server</Description>
         <PackageLicenseExpression>WTFPL</PackageLicenseExpression>
         <PackageReadmeFile>README.md</PackageReadmeFile>
-        <ApplicationIcon>icon.png</ApplicationIcon>
+        <ApplicationIcon>icon.ico</ApplicationIcon>
         <PackageIcon>icon.png</PackageIcon>
     </PropertyGroup>
 
     <ItemGroup>
         <PackageReference Include="ConsoleTables" Version="2.4.2" />
         <PackageReference Include="LibGit2Sharp" Version="0.26.2" />
+        <PackageReference Include="Octokit" Version="3.0.0" />
         <PackageReference Include="SSH.NET" Version="2020.0.2" />
         <PackageReference Include="System.CommandLine" Version="2.0.0-beta4.22272.1" />
     </ItemGroup>
