@@ -14,10 +14,6 @@
         <PackageReadmeFile>README.md</PackageReadmeFile>
         <ApplicationIcon>icon.ico</ApplicationIcon>
         <PackageIcon>icon.png</PackageIcon>
-        <PackageProjectUrl>https://github.com/OliverRC/kickflip</PackageProjectUrl>
-        <RepositoryUrl>https://github.com/OliverRC/kickflip.git</RepositoryUrl>
-        <RepositoryType>git</RepositoryType>
-        <PackageTags>git deployment gitops devops automation github ftp</PackageTags>
     </PropertyGroup>
 
     <ItemGroup>
