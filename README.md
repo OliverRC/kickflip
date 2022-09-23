@@ -1,11 +1,14 @@
 ## Kickflip
 
+![Nuget (with prereleases)](https://img.shields.io/nuget/vpre/kickflip) [![Build](https://github.com/OliverRC/kickflip/actions/workflows/main.yml/badge.svg)](https://github.com/OliverRC/kickflip/actions/workflows/main.yml)
+
 So you got some GIT changes you want to get onto the server?
-No worries you can kick those git changes and flip them over to that remote server!
+No worries! You can kick those git changes and flip them over to that remote server!
 
 ### Usecases
 
-Maybe you have a scripts folder that you want to maintain in git and deploy just the changes FTP when you are ready to release them.
+Maybe you have a scripts folder that maintain in git but are deploying manually.
+Kickflip can help automate determining what files have change and deploy them to the remote server.
 
 ### Using kickflip
 
