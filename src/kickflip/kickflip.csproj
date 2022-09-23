@@ -11,6 +11,7 @@
         <Title>Kickflip</Title>
         <Description>Kick those GIT changes and flip them over to that remote server</Description>
         <PackageLicenseExpression>WTFPL</PackageLicenseExpression>
+        <PackageReadmeFile>README.md</PackageReadmeFile>
     </PropertyGroup>
 
     <ItemGroup>
