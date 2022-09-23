@@ -1,5 +1,4 @@
-﻿using kickflip.Models;
-using LibGit2Sharp;
+﻿using LibGit2Sharp;
 
 namespace kickflip.Services;
 

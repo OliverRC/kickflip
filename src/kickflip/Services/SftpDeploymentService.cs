@@ -1,5 +1,4 @@
-﻿using kickflip.Models;
-using Renci.SshNet;
+﻿using Renci.SshNet;
 using Renci.SshNet.Common;
 
 namespace kickflip.Services;

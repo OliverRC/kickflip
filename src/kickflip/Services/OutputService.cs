@@ -1,5 +1,4 @@
 ﻿using ConsoleTables;
-using kickflip.Models;
 
 namespace kickflip.Services;
 
