@@ -75,9 +75,23 @@ public class GitService
 
     private Tag? GetLastTag(Repository repo, bool ignoreTipTag)
     {
+        Console.WriteLine($"Repo head commit id: {repo.Head.Tip.Id}");
+        
         var commitsToHead = repo.Head.Commits;
+        
+        Console.WriteLine($"Number of commits to head: {repo.Head.Commits.Count()}");
+        foreach (var commit in commitsToHead)
+        {
+            Console.WriteLine($"Commit id: {commit.Id} - {commit.MessageShort}");
+        }
+        
         var tagsOnCommits = repo.Tags.Where(t => t.Target.GetType() == typeof(Commit)).ToList();
 
+        foreach (var tag in tagsOnCommits)
+        {
+            Console.WriteLine($"tagsOnCommits: {tag.FriendlyName}");
+        }
+        
         foreach (var commit in commitsToHead)
         {
             var foundTags = tagsOnCommits.Where(x => x.Target.Peel<Commit>().Id == commit.Id).ToArray();
