@@ -20,7 +20,7 @@ If you are using it on your local development or would just like to have it inst
 
     dotnet tool install --global kickflip
 
-## Github Notes
+## Github Actions
 
 Github Actions `actions/checkout@v3` by default performs a shallow clone of the repo. In order for kickflip to work out all the changes it requires that a full clone be made. This can be achieve by:
 
@@ -28,6 +28,16 @@ Github Actions `actions/checkout@v3` by default performs a shallow clone of the 
 - uses: actions/checkout@v3
   with:
     fetch-depth: 0 # avoid shallow clone so kickflip can do its work.
+```
+
+If scripting for running in a CI build where global impact from installing a tool is undesirable, you can localize the tool installation:
+
+```yaml
+- name: Install kickflip
+  run: dotnet tool install --tool-path ./tools kickflip
+  
+- name: Use kickflip
+  run: ./tools/kickflip <options>
 ```
 
 ## Commandline reference 
