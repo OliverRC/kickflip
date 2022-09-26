@@ -40,3 +40,10 @@ Or on a sub-command
 
     kickflip deploy --help
 
+## Development
+
+Kickflip uses [dotnet/Nerdbank.GitVersioning](https://github.com/dotnet/Nerdbank.GitVersioning) to handle semantic versioning and branching to for releases.
+To prepare a new release the following command must be run.
+
+    nbgv prepare-release
+
