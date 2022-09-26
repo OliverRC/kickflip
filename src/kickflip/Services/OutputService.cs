@@ -11,6 +11,7 @@ public class OutputService
             DeploymentAction.Add => "⬆ Upload",
             DeploymentAction.Modify => "⬆ Upload",
             DeploymentAction.Delete => "❌ Delete",
+            DeploymentAction.Ignore => "🚫 None",
             _ => throw new ArgumentOutOfRangeException(nameof(change.Action), change.Action, "Unknown or unsupported deployment action")
         };
     }

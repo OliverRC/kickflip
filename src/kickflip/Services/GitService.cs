@@ -4,6 +4,13 @@ namespace kickflip.Services;
 
 public class GitService
 {
+    private readonly IgnoreService _ignoreService;
+
+    public GitService(IgnoreService ignoreService)
+    {
+        _ignoreService = ignoreService;
+    }
+
     public List<DeploymentChange> GetChanges(string path)
     {
         // string path = Environment.CurrentDirectory;
@@ -51,6 +58,12 @@ public class GitService
     {
         var changes = new List<DeploymentChange>();
 
+        if (_ignoreService.IsIgnored(change.Path))
+        {
+            changes.Add(new DeploymentChange(DeploymentAction.Ignore, change.Path));
+            return changes;
+        }
+        
         switch (change.Status)
         {
             case ChangeKind.Added:

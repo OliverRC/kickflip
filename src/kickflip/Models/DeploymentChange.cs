@@ -2,10 +2,10 @@
 
 public class DeploymentChange
 {
-    public DeploymentChange(DeploymentAction Action, string Path)
+    public DeploymentChange(DeploymentAction action, string path)
     {
-        this.Action = Action;
-        this.Path = Path;
+        Action = action;
+        Path = path;
     }
 
     public DeploymentAction Action { get; }

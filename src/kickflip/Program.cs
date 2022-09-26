@@ -77,7 +77,8 @@ namespace kickflip
         static void HandleDeployment(string localPath, string deploymentPath, string hostname, int port,
             string username, string password, bool isDryRun)
         {
-            var gitService = new GitService();
+            var ignoreService = new IgnoreService(localPath);
+            var gitService = new GitService(ignoreService);
             var outputService = new OutputService();
             var deploymentService = new SftpDeploymentService(hostname, port, username, password, deploymentPath);
 
@@ -153,7 +154,8 @@ namespace kickflip
 
         private static async Task HandleGitubPullRequest(string localPath, string repository, string pullRequestReference, string token)
         {
-            var gitService = new GitService();
+            var ignoreService = new IgnoreService(localPath);
+            var gitService = new GitService(ignoreService);
             var gitHubService = new GithubService(token);
             var outputService = new OutputService();
             
