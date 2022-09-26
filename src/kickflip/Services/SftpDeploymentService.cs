@@ -66,7 +66,7 @@ public class SftpDeploymentService
     
     private void Upload(string path, DeploymentChange change, bool isDryRun)
     {
-        var localPath = Path.Combine(path, change.Path).Replace("/", "\\");
+        var localPath = Path.Combine(path, change.Path);
         var remotePath = Utilities.Utilities.UrlCombine(_deploymentPath, change.Path);
 
         var uploadOutput = $"\"{localPath}\" to \"{remotePath}\" @ \"{_client.ConnectionInfo.Host}\"";
