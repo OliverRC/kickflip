@@ -56,6 +56,9 @@ public class SftpDeploymentService
             case DeploymentAction.Delete:
                 Delete(change, isDryRun);
                 break;
+            case DeploymentAction.Ignore:
+                Console.WriteLine($"Change ignored: {change.Path}");
+                break;
             default:
                 throw new ArgumentOutOfRangeException(nameof(change.Action), change.Action, "Unknown or unsupported deployment action");
         }
