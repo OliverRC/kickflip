@@ -1,5 +1,6 @@
 ﻿using System.CommandLine;
 using System.CommandLine.Invocation;
+using kickflip.Enums;
 
 namespace kickflip
 {
@@ -67,15 +68,21 @@ namespace kickflip
             deployCommand.AddOption(usernameOption);
             deployCommand.AddOption(passwordOption);
             deployCommand.AddOption(dryRunOption);
-
+            
             deployCommand.SetHandler(HandleDeployment!, localPathArgument, deploymentPathArgument, hostnameOption,
                 portOption, usernameOption, passwordOption, dryRunOption);
 
             return deployCommand;
         }
 
-        static void HandleDeployment(string localPath, string deploymentPath, string hostname, int port,
-            string username, string password, bool isDryRun)
+        static Task<int> HandleDeployment(
+            string localPath, 
+            string deploymentPath, 
+            string hostname, 
+            int port,
+            string username, 
+            string password, 
+            bool isDryRun)
         {
             var ignoreService = new IgnoreService(localPath);
             var gitService = new GitService(ignoreService);
@@ -86,7 +93,15 @@ namespace kickflip
 
             Console.WriteLine(outputService.GetChangesConsole(changes));
 
-            deploymentService.DeployChanges(localPath, changes, isDryRun);
+            var result = deploymentService.DeployChanges(localPath, changes, isDryRun);
+            if (!result)
+            {
+                Console.WriteLine("Deployment failure. Please check the logs for more information.");
+                return Task.FromResult((int) ExitCodes.FailedWithErrors);
+            }
+
+            Console.WriteLine("Deployment successful!");
+            return Task.FromResult((int) ExitCodes.Success);
         }
 
         static Command GithubCommand()
@@ -143,7 +158,7 @@ namespace kickflip
             pullRequestCommand.AddOption(repositoryOption);
             pullRequestCommand.AddOption(refOption);
             pullRequestCommand.AddOption(tokenOption);
-            pullRequestCommand.SetHandler(HandleGitubPullRequest!, localPathArgument, repositoryOption, refOption, tokenOption);
+            pullRequestCommand.SetHandler(HandleGithubPullRequest!, localPathArgument, repositoryOption, refOption, tokenOption);
 
             var githubCommand = new Command("github",
                 "Integration with github to allow kickflip to work in your existing Github workflow.");
@@ -152,7 +167,7 @@ namespace kickflip
             return githubCommand;
         }
 
-        private static async Task HandleGitubPullRequest(string localPath, string repository, string pullRequestReference, string token)
+        private static async Task<int> HandleGithubPullRequest(string localPath, string repository, string pullRequestReference, string token)
         {
             var ignoreService = new IgnoreService(localPath);
             var gitService = new GitService(ignoreService);
@@ -161,7 +176,16 @@ namespace kickflip
             
             var changes = gitService.GetChanges(localPath);
             var comment = outputService.GetChangesMarkdown(changes);
-            await gitHubService.PullRequestCommentChanges(repository, pullRequestReference, comment);
+            var result = await gitHubService.PullRequestCommentChanges(repository, pullRequestReference, comment);
+            
+            if (!result)
+            {
+                Console.WriteLine("Github Pull Request Comment Failure. Please check the logs for more information.");
+                return (int) ExitCodes.FailedWithErrors;
+            }
+
+            Console.WriteLine("Github Pull Request Comment Successful!");
+            return (int)ExitCodes.Success;
         }
     }
 }

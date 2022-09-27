@@ -14,7 +14,7 @@ public class GithubService
         };
     }
 
-    public async Task PullRequestCommentChanges(string repository, string pullRequestReference, string comment)
+    public async Task<bool> PullRequestCommentChanges(string repository, string pullRequestReference, string comment)
     {
         var repositoryParts = repository.Split("/");
         if (repositoryParts.Length != 2)
@@ -24,6 +24,14 @@ public class GithubService
 
         var pullRequestNumber = int.Parse(pullRequestReference.Replace("refs/pull/", "").Replace("/merge", ""));
 
-        var t = await _githubClient.Issue.Comment.Create(repositoryParts[0], repositoryParts[1], pullRequestNumber, comment);
+        var issueComment = await _githubClient.Issue.Comment.Create(repositoryParts[0], repositoryParts[1], pullRequestNumber, comment);
+        if (issueComment == null)
+        {
+            Console.WriteLine($"Unable to add comment to pull request {pullRequestReference} in repository {repository}");
+            return false;
+        }
+
+        Console.WriteLine($"Comment added to pull request #{pullRequestNumber} in repository {repository}");
+        return true;
     }
 }

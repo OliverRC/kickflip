@@ -26,7 +26,7 @@ public class SftpDeploymentService
         Console.WriteLine("Connected!");
     }
     
-    public void DeployChanges(string path, List<DeploymentChange> changes, bool isDryRun)
+    public bool DeployChanges(string path, List<DeploymentChange> changes, bool isDryRun)
     {
         if(isDryRun)
         {
@@ -38,33 +38,33 @@ public class SftpDeploymentService
             Connect();
         }
 
+        var result = true;
         foreach (var change in changes)
         {
-            Deploy(path, change, isDryRun);
+            result &= Deploy(path, change, isDryRun);
         }
         
+        return result;
     }
 
-    private void Deploy(string path, DeploymentChange change, bool isDryRun)
+    private bool Deploy(string path, DeploymentChange change, bool isDryRun)
     {
         switch (change.Action)
         {
             case DeploymentAction.Add:
             case DeploymentAction.Modify:
-                Upload(path, change, isDryRun);
-                break;
+                return Upload(path, change, isDryRun);
             case DeploymentAction.Delete:
-                Delete(change, isDryRun);
-                break;
+                return Delete(change, isDryRun);
             case DeploymentAction.Ignore:
                 Console.WriteLine($"Change ignored: {change.Path}");
-                break;
+                return true;
             default:
                 throw new ArgumentOutOfRangeException(nameof(change.Action), change.Action, "Unknown or unsupported deployment action");
         }
     }
     
-    private void Upload(string path, DeploymentChange change, bool isDryRun)
+    private bool Upload(string path, DeploymentChange change, bool isDryRun)
     {
         var localPath = Path.Combine(path, change.Path);
         var remotePath = Utilities.Utilities.UrlCombine(_deploymentPath, change.Path);
@@ -74,7 +74,7 @@ public class SftpDeploymentService
         if (isDryRun)
         {
             Console.WriteLine($"DRY RUN: Would upload {uploadOutput}");
-            return;
+            return true;
         }
 
         try
@@ -88,10 +88,12 @@ public class SftpDeploymentService
             _client.UploadFile(fileStream, remotePath);
             
             Console.WriteLine($"Uploaded {uploadOutput}");
+            return true;
         }
         catch (Exception exception)
         {
             Console.WriteLine($"Error uploading {uploadOutput}: {exception.Message}");
+            return false;
         }
     }
 
@@ -139,7 +141,7 @@ public class SftpDeploymentService
         }
     }
     
-    private void Delete(DeploymentChange change, bool isDryRun)
+    private bool Delete(DeploymentChange change, bool isDryRun)
     {
         var remotePath = Utilities.Utilities.UrlCombine(_deploymentPath, change.Path);
         var deleteOutput = $"\"{remotePath}\" @ \"{_client.ConnectionInfo.Host}\"";
@@ -147,17 +149,19 @@ public class SftpDeploymentService
         if (isDryRun)
         {
             Console.WriteLine($"DRY RUN: Would delete {deleteOutput}"); 
-            return;
+            return true;
         }
 
         try
         {
             _client.Delete(remotePath);
             Console.WriteLine($"Deleted {deleteOutput}");
+            return true;
         }
         catch (Exception exception)
         {
             Console.WriteLine($"Error deleting {deleteOutput}: {exception.Message}");
+            return false;
         }
     }
 }
