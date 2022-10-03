@@ -15,19 +15,40 @@ public class OutputService
             _ => throw new ArgumentOutOfRangeException(nameof(change.Action), change.Action, "Unknown or unsupported deployment action")
         };
     }
+
+    public string[] GetChangesMarkdown(List<DeploymentChange> changes)
+    {
+        var batches = changes.Chunk(200).ToArray();
+
+        var outputs = new string[batches.Length];
+        for (var i = 0; i < batches.Length; i++)
+        {
+            outputs[i] = GetChangesMarkdown(i, batches[i]);
+        }
+        
+        return outputs;
+    }
     
-    public string GetChangesMarkdown(List<DeploymentChange> changes)
+    private string GetChangesMarkdown(int index, DeploymentChange[] changeBatch)
     {
         var builder = new StringBuilder();
 
-        builder.AppendLine("### 🛹 Kickflip");
-        builder.AppendLine();
+        if (index == 0)
+        {
+            builder.AppendLine("### 🛹 Kickflip");
+            builder.AppendLine();
         
-        builder.AppendLine("The following deployment changes are going to be applied");
-        builder.AppendLine();
-        
+            builder.AppendLine("The following deployment changes are going to be applied");
+            builder.AppendLine();
+        }
+        else
+        {
+            builder.AppendLine("🛹 continuing from previous comment...");
+            builder.AppendLine();
+        }
+
         var table = new ConsoleTable("Change", "Action", "File");
-        foreach (var change in changes)
+        foreach (var change in changeBatch)
         {
             table.AddRow(change.Action, GetAction(change), change.Path);
         }

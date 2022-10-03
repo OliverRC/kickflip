@@ -175,8 +175,8 @@ namespace kickflip
             var outputService = new OutputService();
             
             var changes = gitService.GetChanges(localPath);
-            var comment = outputService.GetChangesMarkdown(changes);
-            var result = await gitHubService.PullRequestCommentChanges(repository, pullRequestReference, comment);
+            var comments = outputService.GetChangesMarkdown(changes);
+            var result = await gitHubService.PullRequestCommentChanges(repository, pullRequestReference, comments);
             
             if (!result)
             {
