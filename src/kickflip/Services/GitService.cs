@@ -1,4 +1,5 @@
-﻿using LibGit2Sharp;
+﻿using kickflip.Enums;
+using LibGit2Sharp;
 
 namespace kickflip.Services;
 
@@ -11,7 +12,7 @@ public class GitService
         _ignoreService = ignoreService;
     }
 
-    public List<DeploymentChange> GetChanges(string path)
+    public List<DeploymentChange> GetChanges(string path, FindMode findMode)
     {
         // string path = Environment.CurrentDirectory;
         using var repo = new Repository(path);
@@ -19,10 +20,20 @@ public class GitService
         Console.WriteLine($"Repository path: {repo.Info.Path}");
         Console.WriteLine($"Current branch: {repo.Head.FriendlyName}");
         Console.WriteLine();
-        
-        var lastTag = GetLastTag(repo, true);
 
-        var fromCommit = lastTag?.Target.Peel<Commit>();
+        Commit? fromCommit = null;
+        switch (findMode)
+        {
+            case FindMode.Tags:
+                fromCommit = GetLastCommitByTag(repo, true);
+                break;
+            case FindMode.GitHubMergePR:
+                fromCommit = GetLastCommitByGitHubMergePr(repo, true);
+                break;
+            default:
+                throw new ArgumentOutOfRangeException(nameof(findMode), findMode, "Invalid find mode");
+        }
+        
 
         var fromCommitInfo =
             fromCommit == null ? "<root commit>" : $"\"{fromCommit.Id} {fromCommit.MessageShort}\"";
@@ -86,6 +97,12 @@ public class GitService
         return changes;
     }
 
+    private Commit? GetLastCommitByTag(Repository repo, bool ignoreTipTag)
+    {
+        var lastTag = GetLastTag(repo, true);
+        return lastTag?.Target.Peel<Commit>();
+    }
+
     private Tag? GetLastTag(Repository repo, bool ignoreTipTag)
     {
         var commitsToHead = repo.Head.Commits;
@@ -112,6 +129,28 @@ public class GitService
             }
 
             return foundTags[0];
+        }
+
+        return null;
+    }
+    
+    private Commit? GetLastCommitByGitHubMergePr(Repository repo, bool ignoreTip)
+    {
+        var commitsToHead = repo.Head.Commits;
+        foreach (var commit in commitsToHead)
+        {
+            if (!commit.Message.StartsWith("Merge pull request #", StringComparison.InvariantCultureIgnoreCase))
+            {
+                continue;
+            }
+            
+            if (ignoreTip && commit == repo.Head.Tip)
+            {
+                Console.WriteLine($"Ignoring commit {commit} because it is the tip of the current branch and ignoreTip is true");
+                continue;
+            }
+
+            return commit;
         }
 
         return null;

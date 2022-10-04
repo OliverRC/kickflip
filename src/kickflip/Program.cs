@@ -26,7 +26,13 @@ namespace kickflip
                 "Local path to the folder containing the git repository. The local path is an absolute path.",
                 getDefaultValue: Directory.GetCurrentDirectory);
 
-            var deploymentPathArgument = new Option<string?>
+            var findModeOption = new Option<FindMode>(
+                name: "--mode",
+                description:
+                "The find mode to use when trying to determine the starting point to compare changes too HEAD with.",
+                getDefaultValue: () => FindMode.Tags);
+            
+            var deploymentPathOption = new Option<string?>
             (name: "--deployment-path",
                 description:
                 "Deployment path on the remote server to deploy to. The deployment path is relative to the root of the user account on the remote server.",
@@ -52,7 +58,7 @@ namespace kickflip
                 name: "--password",
                 description: "Authentication password for the remote server"
             ) {IsRequired = true};
-
+            
             var dryRunOption = new Option<bool>(
                 name: "--dry",
                 description:
@@ -61,15 +67,17 @@ namespace kickflip
 
             var deployCommand =
                 new Command("deploy", "Kick your git changes and flip them over to that remote server!");
+            
             deployCommand.AddArgument(localPathArgument);
-            deployCommand.AddOption(deploymentPathArgument);
+            deployCommand.AddOption(findModeOption);
+            deployCommand.AddOption(deploymentPathOption);
             deployCommand.AddOption(hostnameOption);
             deployCommand.AddOption(portOption);
             deployCommand.AddOption(usernameOption);
             deployCommand.AddOption(passwordOption);
             deployCommand.AddOption(dryRunOption);
             
-            deployCommand.SetHandler(HandleDeployment!, localPathArgument, deploymentPathArgument, hostnameOption,
+            deployCommand.SetHandler(HandleDeployment!, localPathArgument, findModeOption, deploymentPathOption, hostnameOption,
                 portOption, usernameOption, passwordOption, dryRunOption);
 
             return deployCommand;
@@ -77,6 +85,7 @@ namespace kickflip
 
         static Task<int> HandleDeployment(
             string localPath, 
+            FindMode findMode,
             string deploymentPath, 
             string hostname, 
             int port,
@@ -89,7 +98,7 @@ namespace kickflip
             var outputService = new OutputService();
             var deploymentService = new SftpDeploymentService(hostname, port, username, password, deploymentPath);
 
-            var changes = gitService.GetChanges(localPath);
+            var changes = gitService.GetChanges(localPath, findMode);
 
             Console.WriteLine(outputService.GetChangesConsole(changes));
 
@@ -111,6 +120,12 @@ namespace kickflip
                 description:
                 "Local path to the folder containing the git repository. The local path is an absolute path.",
                 getDefaultValue: Directory.GetCurrentDirectory);
+            
+            var findModeOption = new Option<FindMode>(
+                name: "--mode",
+                description:
+                "The find mode to use when trying to determine the starting point to compare changes too HEAD with.",
+                getDefaultValue: () => FindMode.Tags);
             
             var repositoryOption = new Option<string?>(
                 name: "--repo",
@@ -155,10 +170,11 @@ namespace kickflip
                 "Adds a comment to the pull request with the changes that will be deployed to the remote server.");
             pullRequestCommand.AddAlias("pr");
             pullRequestCommand.AddArgument(localPathArgument);
+            pullRequestCommand.AddOption(findModeOption);
             pullRequestCommand.AddOption(repositoryOption);
             pullRequestCommand.AddOption(refOption);
             pullRequestCommand.AddOption(tokenOption);
-            pullRequestCommand.SetHandler(HandleGithubPullRequest!, localPathArgument, repositoryOption, refOption, tokenOption);
+            pullRequestCommand.SetHandler(HandleGithubPullRequest!, localPathArgument, findModeOption, repositoryOption, refOption, tokenOption);
 
             var githubCommand = new Command("github",
                 "Integration with github to allow kickflip to work in your existing Github workflow.");
@@ -167,14 +183,14 @@ namespace kickflip
             return githubCommand;
         }
 
-        private static async Task<int> HandleGithubPullRequest(string localPath, string repository, string pullRequestReference, string token)
+        private static async Task<int> HandleGithubPullRequest(string localPath, FindMode findMode, string repository, string pullRequestReference, string token)
         {
             var ignoreService = new IgnoreService(localPath);
             var gitService = new GitService(ignoreService);
             var gitHubService = new GithubService(token);
             var outputService = new OutputService();
             
-            var changes = gitService.GetChanges(localPath);
+            var changes = gitService.GetChanges(localPath, findMode);
             var comments = outputService.GetChangesMarkdown(changes);
             var result = await gitHubService.PullRequestCommentChanges(repository, pullRequestReference, comments);
             
