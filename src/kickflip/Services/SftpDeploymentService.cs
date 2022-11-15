@@ -158,6 +158,11 @@ public class SftpDeploymentService
             Console.WriteLine($"Deleted {deleteOutput}");
             return true;
         }
+        catch (SftpPathNotFoundException)
+        {
+            Console.WriteLine($"{deleteOutput} does not exist, nothing to delete");
+            return true;
+        }
         catch (Exception exception)
         {
             Console.WriteLine($"Error deleting {deleteOutput}: {exception.Message}");
