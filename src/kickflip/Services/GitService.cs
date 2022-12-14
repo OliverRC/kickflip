@@ -139,7 +139,8 @@ public class GitService
         var commitsToHead = repo.Head.Commits;
         foreach (var commit in commitsToHead)
         {
-            if (!commit.Message.StartsWith("Merge pull request #", StringComparison.InvariantCultureIgnoreCase))
+            if (!commit.Message.StartsWith("Merge pull request #", StringComparison.InvariantCultureIgnoreCase) && 
+                !commit.Message.StartsWith("Revert \"Merge pull request #", StringComparison.InvariantCultureIgnoreCase))
             {
                 continue;
             }
