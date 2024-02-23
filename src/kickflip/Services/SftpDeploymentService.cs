@@ -86,6 +86,12 @@ public class SftpDeploymentService
          
             CreateDirectoriesRecursively(directoryPath);
             _client.UploadFile(fileStream, remotePath);
+
+            var remoteFileInfo = _client.GetAttributes(remotePath);
+            if (remoteFileInfo.Size != fileInfo.Length)
+            {
+                throw new Exception($"Post-upload check failed: Local file size ({fileInfo.Length} bytes) does not match remote file size ({remoteFileInfo.Size} bytes).");
+            }
             
             Console.WriteLine($"Uploaded {uploadOutput}");
             return true;
