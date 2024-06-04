@@ -1,4 +1,5 @@
-﻿using Renci.SshNet;
+﻿using System.Security.Cryptography;
+using Renci.SshNet;
 using Renci.SshNet.Common;
 
 namespace kickflip.Services;
@@ -82,10 +83,27 @@ public class SftpDeploymentService
             var fileInfo = new FileInfo(localPath);
             using var fileStream = fileInfo.OpenRead();
             
+            // Calculate MD5 of local file
+            var localHash = CalculateMD5(fileStream);
+            fileStream.Position = 0; // Reset stream position for upload
+            
             var directoryPath = remotePath.Replace(fileInfo.Name, "");
          
             CreateDirectoriesRecursively(directoryPath);
             _client.UploadFile(fileStream, remotePath);
+            
+            // Calculate MD5 of downloaded file
+            using var downloadedStream = new MemoryStream();
+            _client.DownloadFile(remotePath, downloadedStream);
+            downloadedStream.Position = 0; // Reset stream position for hash calculation
+            var downloadedHash = CalculateMD5(downloadedStream);
+            
+            // Compare MD5 hashes
+            if (!CompareHashes(localHash, downloadedHash))
+            {
+                Console.WriteLine($"MD5 hash mismatch for {uploadOutput}");
+                return false;
+            }
             
             Console.WriteLine($"Uploaded {uploadOutput}");
             return true;
@@ -168,5 +186,16 @@ public class SftpDeploymentService
             Console.WriteLine($"Error deleting {deleteOutput}: {exception.Message}");
             return false;
         }
+    }
+    
+    private byte[] CalculateMD5(Stream stream)
+    {
+        using var md5 = MD5.Create();
+        return md5.ComputeHash(stream);
+    }
+
+    private bool CompareHashes(byte[] hash1, byte[] hash2)
+    {
+        return hash1.SequenceEqual(hash2);
     }
 }
