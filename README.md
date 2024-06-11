@@ -20,6 +20,16 @@ If you are using it on your local development or would just like to have it inst
 
     dotnet tool install --global kickflip
 
+Once installed you can run the tool from the command line.
+
+Default which uses mode = Tags (e.g GitHub Releases)
+
+    kickflip deploy --hostname <ftp-hostname> --port <ftp-port (24)> --username <ftp-username> --password <ftp-password>
+
+Or Tags
+
+    kickflip deploy --mode Tags --hostname <ftp-hostname> --port <ftp-port (24)> --username <ftp-username> --password <ftp-password>
+
 ## Github Actions
 
 Github Actions `actions/checkout@v3` by default performs a shallow clone of the repo. In order for kickflip to work out all the changes it requires that a full clone be made. This can be achieve by:
