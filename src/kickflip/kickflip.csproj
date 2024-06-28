@@ -19,6 +19,7 @@
         <RepositoryType>git</RepositoryType>
         <PackageTags>git deployment gitops devops automation github ftp</PackageTags>
         <LangVersion>12</LangVersion>
+        <GeneratePackageOnBuild>false</GeneratePackageOnBuild>
     </PropertyGroup>
 
     <ItemGroup>
