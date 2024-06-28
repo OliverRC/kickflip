@@ -41,17 +41,9 @@ public class GitService(IgnoreService ignoreService)
             return new List<DeploymentChange>();
         }
         
-        Console.WriteLine("The following git changes were found:");
         var deploymentChanges = new List<DeploymentChange>();
         foreach (var change in changes)
         {
-            Console.WriteLine($"{change.Status}    {change.Path}");
-            if (change.Status == ChangeKind.Renamed)
-            {
-                Console.WriteLine($" - {ChangeKind.Deleted}    {change.OldPath}");
-                Console.WriteLine($" - {ChangeKind.Added}    {change.Path}");
-            }
-
             deploymentChanges.AddRange(ToDeploymentChanges(change, deploymentPath));
         }
             

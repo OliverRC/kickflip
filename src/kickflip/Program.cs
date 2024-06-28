@@ -211,6 +211,8 @@ namespace kickflip
                 _ => throw new ArgumentOutOfRangeException(nameof(findMode), findMode, null)
             };
             
+            Console.WriteLine(outputService.GetChangesConsole(changes));
+            
             var comments = outputService.GetChangesMarkdown(changes);
             var result = await gitHubService.PullRequestCommentChanges(repository, pullRequestReference, comments);
 
