@@ -10,6 +10,7 @@ public class OutputService
         {
             DeploymentAction.Add => "⬆ Upload",
             DeploymentAction.Modify => "⬆ Upload",
+            DeploymentAction.AddOrModify => "⬆ Upload",
             DeploymentAction.Delete => "❌ Delete",
             DeploymentAction.Ignore => "🚫 None",
             _ => throw new ArgumentOutOfRangeException(nameof(change.Action), change.Action, "Unknown or unsupported deployment action")
@@ -47,10 +48,10 @@ public class OutputService
             builder.AppendLine();
         }
 
-        var table = new ConsoleTable("Change", "Action", "File");
+        var table = new ConsoleTable("Change", "Action", "Source", "File", "Deployment Path");
         foreach (var change in changeBatch)
         {
-            table.AddRow(change.Action, GetAction(change), change.Path);
+            table.AddRow(change.Action, GetAction(change), change.Source, change.Path, change.DeploymentPath);
         }
         
         builder.AppendLine(table.ToMarkDownString());
@@ -67,10 +68,10 @@ public class OutputService
         builder.AppendLine("The following deployment changes are going to be applied");
         builder.AppendLine();
         
-        var table = new ConsoleTable("Change", "Action", "File");
+        var table = new ConsoleTable("Change", "Action", "Source", "File", "Deployment Path");
         foreach (var change in changes)
         {
-            table.AddRow(change.Action, GetAction(change), change.Path);
+            table.AddRow(change.Action, GetAction(change), change.Source, change.Path, change.DeploymentPath);
         }
         
         builder.AppendLine(table.ToString());

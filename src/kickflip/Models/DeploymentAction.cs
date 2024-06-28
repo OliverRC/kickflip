@@ -4,6 +4,7 @@ public enum DeploymentAction
 {
     Add,
     Modify,
+    AddOrModify,
     Delete,
     Ignore
 }

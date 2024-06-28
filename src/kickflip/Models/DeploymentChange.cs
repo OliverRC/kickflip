@@ -1,13 +1,5 @@
-﻿namespace kickflip.Models;
+﻿using kickflip.Enums;
 
-public class DeploymentChange
-{
-    public DeploymentChange(DeploymentAction action, string path)
-    {
-        Action = action;
-        Path = path;
-    }
+namespace kickflip.Models;
 
-    public DeploymentAction Action { get; }
-    public string Path { get; }
-}
+public record DeploymentChange(DeploymentAction Action, Source Source, string Path, string DeploymentPath);

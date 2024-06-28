@@ -3,16 +3,9 @@ using LibGit2Sharp;
 
 namespace kickflip.Services;
 
-public class GitService
+public class GitService(IgnoreService ignoreService)
 {
-    private readonly IgnoreService _ignoreService;
-
-    public GitService(IgnoreService ignoreService)
-    {
-        _ignoreService = ignoreService;
-    }
-
-    public List<DeploymentChange> GetChanges(string path, FindMode findMode)
+    public List<DeploymentChange> GetChanges(string path, string deploymentPath, FindMode findMode)
     {
         // string path = Environment.CurrentDirectory;
         using var repo = new Repository(path);
@@ -59,36 +52,37 @@ public class GitService
                 Console.WriteLine($" - {ChangeKind.Added}    {change.Path}");
             }
 
-            deploymentChanges.AddRange(ToDeploymentChanges(change));
+            deploymentChanges.AddRange(ToDeploymentChanges(change, deploymentPath));
         }
             
         return deploymentChanges;
     }
 
-    private IEnumerable<DeploymentChange> ToDeploymentChanges(TreeEntryChanges change)
+    private IEnumerable<DeploymentChange> ToDeploymentChanges(TreeEntryChanges change, string deploymentPath)
     {
         var changes = new List<DeploymentChange>();
 
-        if (_ignoreService.IsIgnored(change.Path))
+        if (ignoreService.IsIgnored(change.Path))
         {
-            changes.Add(new DeploymentChange(DeploymentAction.Ignore, change.Path));
+            changes.Add(new DeploymentChange(DeploymentAction.Ignore, Source.Git, change.Path, ""));
             return changes;
         }
         
+        var deploymentPathWithFile = Path.Combine(deploymentPath, change.Path);
         switch (change.Status)
         {
             case ChangeKind.Added:
-                changes.Add(new DeploymentChange(DeploymentAction.Add, change.Path));
+                changes.Add(new DeploymentChange(DeploymentAction.Add, Source.Git, change.Path, deploymentPathWithFile));
                 break;
             case ChangeKind.Deleted:
-                changes.Add(new DeploymentChange(DeploymentAction.Delete, change.Path));
+                changes.Add(new DeploymentChange(DeploymentAction.Delete, Source.Git, change.Path, deploymentPathWithFile));
                 break;
             case ChangeKind.Modified:
-                changes.Add(new DeploymentChange(DeploymentAction.Modify, change.Path));
+                changes.Add(new DeploymentChange(DeploymentAction.Modify, Source.Git, change.Path, deploymentPathWithFile));
                 break;
             case ChangeKind.Renamed:
-                changes.Add(new DeploymentChange(DeploymentAction.Add, change.Path));
-                changes.Add(new DeploymentChange(DeploymentAction.Delete, change.OldPath));
+                changes.Add(new DeploymentChange(DeploymentAction.Add, Source.Git, change.Path, deploymentPathWithFile));
+                changes.Add(new DeploymentChange(DeploymentAction.Delete, Source.Git, change.OldPath, deploymentPathWithFile));
                 break;
             default:
                 throw new ArgumentOutOfRangeException(nameof(change.Status), change.Status, "Currently only Added, Deleted, Modified and Renamed are supported");

@@ -21,15 +21,15 @@ public class SftpDeploymentService
         {
             return;
         }
-        
+
         Console.WriteLine($"Connecting to remote server {_client.ConnectionInfo.Host}:{_client.ConnectionInfo.Port} with user {_client.ConnectionInfo.Username}");
         _client.Connect();
         Console.WriteLine("Connected!");
     }
-    
+
     public bool DeployChanges(string path, List<DeploymentChange> changes, bool isDryRun)
     {
-        if(isDryRun)
+        if (isDryRun)
         {
             Console.WriteLine("Dry run, no changes will be made");
             Console.WriteLine();
@@ -44,7 +44,7 @@ public class SftpDeploymentService
         {
             result &= Deploy(path, change, isDryRun);
         }
-        
+
         return result;
     }
 
@@ -54,6 +54,7 @@ public class SftpDeploymentService
         {
             case DeploymentAction.Add:
             case DeploymentAction.Modify:
+            case DeploymentAction.AddOrModify:
                 return Upload(path, change, isDryRun);
             case DeploymentAction.Delete:
                 return Delete(change, isDryRun);
@@ -64,14 +65,14 @@ public class SftpDeploymentService
                 throw new ArgumentOutOfRangeException(nameof(change.Action), change.Action, "Unknown or unsupported deployment action");
         }
     }
-    
+
     private bool Upload(string path, DeploymentChange change, bool isDryRun)
     {
         var localPath = Path.Combine(path, change.Path);
-        var remotePath = Utilities.Utilities.UrlCombine(_deploymentPath, change.Path);
+        var remotePath = change.DeploymentPath;
 
         var uploadOutput = $"\"{localPath}\" to \"{remotePath}\" @ \"{_client.ConnectionInfo.Host}\"";
-        
+
         if (isDryRun)
         {
             Console.WriteLine($"DRY RUN: Would upload {uploadOutput}");
@@ -82,29 +83,29 @@ public class SftpDeploymentService
         {
             var fileInfo = new FileInfo(localPath);
             using var fileStream = fileInfo.OpenRead();
-            
+
             // Calculate MD5 of local file
             var localHash = CalculateMD5(fileStream);
             fileStream.Position = 0; // Reset stream position for upload
-            
+
             var directoryPath = remotePath.Replace(fileInfo.Name, "");
-         
+
             CreateDirectoriesRecursively(directoryPath);
             _client.UploadFile(fileStream, remotePath);
-            
+
             // Calculate MD5 of downloaded file
             using var downloadedStream = new MemoryStream();
             _client.DownloadFile(remotePath, downloadedStream);
             downloadedStream.Position = 0; // Reset stream position for hash calculation
             var downloadedHash = CalculateMD5(downloadedStream);
-            
+
             // Compare MD5 hashes
             if (!CompareHashes(localHash, downloadedHash))
             {
                 Console.WriteLine($"MD5 hash mismatch for {uploadOutput}");
                 return false;
             }
-            
+
             Console.WriteLine($"Uploaded {uploadOutput}");
             return true;
         }
@@ -158,15 +159,15 @@ public class SftpDeploymentService
             }
         }
     }
-    
+
     private bool Delete(DeploymentChange change, bool isDryRun)
     {
-        var remotePath = Utilities.Utilities.UrlCombine(_deploymentPath, change.Path);
+        var remotePath = change.DeploymentPath;
         var deleteOutput = $"\"{remotePath}\" @ \"{_client.ConnectionInfo.Host}\"";
-        
+
         if (isDryRun)
         {
-            Console.WriteLine($"DRY RUN: Would delete {deleteOutput}"); 
+            Console.WriteLine($"DRY RUN: Would delete {deleteOutput}");
             return true;
         }
 
@@ -187,7 +188,7 @@ public class SftpDeploymentService
             return false;
         }
     }
-    
+
     private byte[] CalculateMD5(Stream stream)
     {
         using var md5 = MD5.Create();

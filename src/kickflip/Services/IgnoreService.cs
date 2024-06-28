@@ -9,6 +9,7 @@ public class IgnoreService
     public IgnoreService(string localPath)
     {
         _matcher = new Matcher();
+        _matcher.AddInclude("**/*.kickflipignore");
         
         var ignoreFile = Path.Combine(localPath, ".kickflipignore");
         if (!File.Exists(ignoreFile))

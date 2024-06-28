@@ -19,10 +19,10 @@ namespace kickflip
 
         static Command DeployCommand()
         {
-            var localPathArgument = new Argument<string?>
-            (name: "local-path",
+            var pathArgument = new Argument<string?>
+            (name: "path",
                 description:
-                "Local path to the folder containing the git repository. The local path is an absolute path.",
+                "Path to the folder containing the git repository for Git based deployment modes or the folder to use in folder deployment. The path is an absolute path.",
                 getDefaultValue: Directory.GetCurrentDirectory);
 
             var findModeOption = new Option<FindMode>(
@@ -30,7 +30,7 @@ namespace kickflip
                 description:
                 "The find mode to use when trying to determine the starting point to compare changes too HEAD with.",
                 getDefaultValue: () => FindMode.Tags);
-            
+
             var deploymentPathOption = new Option<string?>
             (name: "--deployment-path",
                 description:
@@ -57,7 +57,7 @@ namespace kickflip
                 name: "--password",
                 description: "Authentication password for the remote server"
             ) {IsRequired = true};
-            
+
             var dryRunOption = new Option<bool>(
                 name: "--dry",
                 description:
@@ -66,8 +66,8 @@ namespace kickflip
 
             var deployCommand =
                 new Command("deploy", "Kick your git changes and flip them over to that remote server!");
-            
-            deployCommand.AddArgument(localPathArgument);
+
+            deployCommand.AddArgument(pathArgument);
             deployCommand.AddOption(findModeOption);
             deployCommand.AddOption(deploymentPathOption);
             deployCommand.AddOption(hostnameOption);
@@ -75,41 +75,11 @@ namespace kickflip
             deployCommand.AddOption(usernameOption);
             deployCommand.AddOption(passwordOption);
             deployCommand.AddOption(dryRunOption);
-            
-            deployCommand.SetHandler(HandleDeployment!, localPathArgument, findModeOption, deploymentPathOption, hostnameOption,
+
+            deployCommand.SetHandler(HandleDeployment!, pathArgument, findModeOption, deploymentPathOption, hostnameOption,
                 portOption, usernameOption, passwordOption, dryRunOption);
 
             return deployCommand;
-        }
-
-        static Task<int> HandleDeployment(
-            string localPath, 
-            FindMode findMode,
-            string deploymentPath, 
-            string hostname, 
-            int port,
-            string username, 
-            string password, 
-            bool isDryRun)
-        {
-            var ignoreService = new IgnoreService(localPath);
-            var gitService = new GitService(ignoreService);
-            var outputService = new OutputService();
-            var deploymentService = new SftpDeploymentService(hostname, port, username, password, deploymentPath);
-
-            var changes = gitService.GetChanges(localPath, findMode);
-
-            Console.WriteLine(outputService.GetChangesConsole(changes));
-
-            var result = deploymentService.DeployChanges(localPath, changes, isDryRun);
-            if (!result)
-            {
-                Console.WriteLine("Deployment failure. Please check the logs for more information.");
-                return Task.FromResult((int) ExitCodes.FailedWithErrors);
-            }
-
-            Console.WriteLine("Deployment successful!");
-            return Task.FromResult((int) ExitCodes.Success);
         }
 
         static Command GithubCommand()
@@ -119,13 +89,19 @@ namespace kickflip
                 description:
                 "Local path to the folder containing the git repository. The local path is an absolute path.",
                 getDefaultValue: Directory.GetCurrentDirectory);
-            
+
             var findModeOption = new Option<FindMode>(
                 name: "--mode",
                 description:
                 "The find mode to use when trying to determine the starting point to compare changes too HEAD with.",
                 getDefaultValue: () => FindMode.Tags);
-            
+
+            var deploymentPathOption = new Option<string?>
+            (name: "--deployment-path",
+                description:
+                "Deployment path on the remote server to deploy to. The deployment path is relative to the root of the user account on the remote server.",
+                getDefaultValue: () => "/");
+
             var repositoryOption = new Option<string?>(
                 name: "--repo",
                 description: "The repository where the PR resides. Should be in the format of <owner>/<repository>.",
@@ -170,10 +146,11 @@ namespace kickflip
             pullRequestCommand.AddAlias("pr");
             pullRequestCommand.AddArgument(localPathArgument);
             pullRequestCommand.AddOption(findModeOption);
+            pullRequestCommand.AddOption(deploymentPathOption);
             pullRequestCommand.AddOption(repositoryOption);
             pullRequestCommand.AddOption(refOption);
             pullRequestCommand.AddOption(tokenOption);
-            pullRequestCommand.SetHandler(HandleGithubPullRequest!, localPathArgument, findModeOption, repositoryOption, refOption, tokenOption);
+            pullRequestCommand.SetHandler(HandleGithubPullRequest!, localPathArgument, findModeOption, deploymentPathOption, repositoryOption, refOption, tokenOption);
 
             var githubCommand = new Command("github",
                 "Integration with github to allow kickflip to work in your existing Github workflow.");
@@ -182,17 +159,61 @@ namespace kickflip
             return githubCommand;
         }
 
-        private static async Task<int> HandleGithubPullRequest(string localPath, FindMode findMode, string repository, string pullRequestReference, string token)
+        static Task<int> HandleDeployment(
+            string localPath,
+            FindMode findMode,
+            string deploymentPath,
+            string hostname,
+            int port,
+            string username,
+            string password,
+            bool isDryRun)
         {
             var ignoreService = new IgnoreService(localPath);
             var gitService = new GitService(ignoreService);
+            var fileSystemService = new FileSystemService(ignoreService);
+            var outputService = new OutputService();
+            var deploymentService = new SftpDeploymentService(hostname, port, username, password, deploymentPath);
+
+            var changes = findMode switch
+            {
+                FindMode.Tags or FindMode.GitHubMergePR => gitService.GetChanges(localPath, deploymentPath, findMode),
+                FindMode.Folder => fileSystemService.GetChanges(localPath, deploymentPath),
+                _ => throw new ArgumentOutOfRangeException(nameof(findMode), findMode, null)
+            };
+
+            Console.WriteLine(outputService.GetChangesConsole(changes));
+
+            var result = deploymentService.DeployChanges(localPath, changes, isDryRun);
+            if (!result)
+            {
+                Console.WriteLine("Deployment failure. Please check the logs for more information.");
+                return Task.FromResult((int) ExitCodes.FailedWithErrors);
+            }
+
+            Console.WriteLine("Deployment successful!");
+            return Task.FromResult((int) ExitCodes.Success);
+        }
+
+        private static async Task<int> HandleGithubPullRequest(string localPath, FindMode findMode, string deploymentPath, string repository, string pullRequestReference,
+            string token)
+        {
+            var ignoreService = new IgnoreService(localPath);
+            var gitService = new GitService(ignoreService);
+            var fileSystemService = new FileSystemService(ignoreService);
             var gitHubService = new GithubService(token);
             var outputService = new OutputService();
+
+            var changes = findMode switch
+            {
+                FindMode.Tags or FindMode.GitHubMergePR => gitService.GetChanges(localPath, deploymentPath, findMode),
+                FindMode.Folder => fileSystemService.GetChanges(localPath, deploymentPath),
+                _ => throw new ArgumentOutOfRangeException(nameof(findMode), findMode, null)
+            };
             
-            var changes = gitService.GetChanges(localPath, findMode);
             var comments = outputService.GetChangesMarkdown(changes);
             var result = await gitHubService.PullRequestCommentChanges(repository, pullRequestReference, comments);
-            
+
             if (!result)
             {
                 Console.WriteLine("Github Pull Request Comment Failure. Please check the logs for more information.");
@@ -200,7 +221,7 @@ namespace kickflip
             }
 
             Console.WriteLine("Github Pull Request Comment Successful!");
-            return (int)ExitCodes.Success;
+            return (int) ExitCodes.Success;
         }
     }
 }

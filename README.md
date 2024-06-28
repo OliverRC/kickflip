@@ -22,6 +22,7 @@ If you are using it on your local development or would just like to have it inst
 
 Once installed you can run the tool from the command line.
 
+### Tags (e.g Github Release)
 Default which uses mode = Tags (e.g GitHub Releases)
 
     kickflip deploy --hostname <ftp-hostname> --port <ftp-port (24)> --username <ftp-username> --password <ftp-password>
@@ -30,12 +31,28 @@ Or Tags
 
     kickflip deploy --mode Tags --hostname <ftp-hostname> --port <ftp-port (24)> --username <ftp-username> --password <ftp-password>
 
+### GitHubMergePr
+
+This tries to work out the changes between two PR merges. Useful for rapid deployment scenarios where PR's are used and you don't need to bundle multiple merges together.
+
+    kickflip deploy --mode GitHubMergePr --hostname <ftp-hostname> --port <ftp-port (24)> --username <ftp-username> --password <ftp-password>
+
+### Folder 
+
+You may want to statically upload the contents of a folder. For example maybe there is some build assets produced on on your CI/CD server.
+
+    kickflip deploy --mode Folder --deployment-path /public_html --hostname <ftp-hostname> --port <ftp-port (24)> --username <ftp-username> --password <ftp-password> --folder <folder-path>
+
+**Note**: `--deployment-path` defaults to `/` however it is strongly recommended to set this to ensure you know where the files are going.
+
+**Caveat**: To ignore files the `.kickflipignore` file must be present IN the folder.
+
 ## Github Actions
 
-Github Actions `actions/checkout@v3` by default performs a shallow clone of the repo. In order for kickflip to work out all the changes it requires that a full clone be made. This can be achieve by:
+Github Actions `actions/checkout@v4` by default performs a shallow clone of the repo. In order for kickflip to work out all the changes it requires that a full clone be made. This can be achieve by:
 
 ```yaml
-- uses: actions/checkout@v3
+- uses: actions/checkout@v4
   with:
     fetch-depth: 0 # avoid shallow clone so kickflip can do its work.
 ```
