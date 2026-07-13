@@ -13,9 +13,9 @@ jobs:
 
     steps:
     - uses: actions/checkout@v4
-      with:
-        fetch-depth: 0 # avoid shallow clone so nbgv can do its work.
+    - name: Restore
+      run: dotnet restore
     - name: Test
-      run: dotnet test --verbosity normal
+      run: dotnet test --no-restore --configuration Release --verbosity normal
     - name: Pack
-      run: dotnet pack -o dist --verbosity normal
+      run: dotnet pack src/kickflip/kickflip.csproj --no-restore --configuration Release -o dist --verbosity normal

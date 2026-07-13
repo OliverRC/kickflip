@@ -1,9 +1,11 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
-<Project ToolsVersion="Current" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
-  <ItemGroup>
-    <PackageReference Include="Nerdbank.GitVersioning" Condition="!Exists('packages.config')">
-      <PrivateAssets>all</PrivateAssets>
-      <Version>3.5.113</Version>
-    </PackageReference>
-  </ItemGroup>
+<Project>
+  <PropertyGroup>
+    <!--
+      Local and pull-request builds use a harmless development version.
+      The release workflow supplies an explicit semantic version from the
+      published GitHub release tag via -p:Version=<version>.
+    -->
+    <Version Condition="'$(Version)' == ''">0.0.0-local</Version>
+    <IncludeSourceRevisionInInformationalVersion>false</IncludeSourceRevisionInInformationalVersion>
+  </PropertyGroup>
 </Project>

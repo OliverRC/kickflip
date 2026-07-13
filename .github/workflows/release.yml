@@ -1,19 +1,70 @@
 name: Release
 
 on:
-  push:
-    branches: [ "v*" ]
+  release:
+    types: [published]
+
+permissions:
+  contents: read
 
 jobs:
-  build:
-
+  publish:
     runs-on: ubuntu-latest
 
     steps:
     - uses: actions/checkout@v4
       with:
-        fetch-depth: 0 # avoid shallow clone so nbgv can do its work.
+        ref: ${{ github.event.release.tag_name }}
+        fetch-depth: 0
+
+    - name: Validate release tag
+      id: version
+      shell: bash
+      env:
+        RELEASE_TAG: ${{ github.event.release.tag_name }}
+      run: |
+        set -euo pipefail
+
+        git fetch origin main
+        if ! git merge-base --is-ancestor HEAD origin/main; then
+          echo "Release tag '$RELEASE_TAG' does not point to a commit on main." >&2
+          exit 1
+        fi
+
+        version="${RELEASE_TAG#v}"
+        semver='^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)(-[0-9A-Za-z-]+(\.[0-9A-Za-z-]+)*)?$'
+
+        if [[ ! "$version" =~ $semver ]]; then
+          echo "Release tag '$RELEASE_TAG' is not a NuGet-compatible semantic version. Use a tag such as v2.1.0 or 2.1.0-beta.1." >&2
+          exit 1
+        fi
+
+        echo "version=$version" >> "$GITHUB_OUTPUT"
+
+    - name: Restore
+      run: dotnet restore
+
+    - name: Test
+      run: dotnet test --no-restore --configuration Release -p:Version=${{ steps.version.outputs.version }}
+
     - name: Pack
-      run: dotnet pack -o dist --verbosity normal
-    - name: Publish
-      run: dotnet nuget push "dist/*.nupkg" --api-key ${{ secrets.NUGET_APIKEY }} --source https://api.nuget.org/v3/index.json
+      run: dotnet pack src/kickflip/kickflip.csproj --no-restore --configuration Release -p:Version=${{ steps.version.outputs.version }} -o dist --verbosity normal
+
+    - name: Verify package and binary versions
+      shell: bash
+      env:
+        VERSION: ${{ steps.version.outputs.version }}
+      run: |
+        set -euo pipefail
+
+        package="dist/kickflip.${VERSION}.nupkg"
+        test -f "$package"
+
+        informational_version="$(dotnet exec src/kickflip/bin/Release/net8.0/kickflip.dll --version)"
+        if [[ "$informational_version" != "$VERSION" ]]; then
+          echo "Binary version '$informational_version' does not match release version '$VERSION'." >&2
+          exit 1
+        fi
+
+    - name: Publish to NuGet
+      run: dotnet nuget push "dist/kickflip.${{ steps.version.outputs.version }}.nupkg" --api-key "${{ secrets.NUGET_APIKEY }}" --source https://api.nuget.org/v3/index.json --skip-duplicate

@@ -105,8 +105,24 @@ Run the whole suite with:
 
 ## Development
 
-Kickflip uses [dotnet/Nerdbank.GitVersioning](https://github.com/dotnet/Nerdbank.GitVersioning) to handle semantic versioning and branching to for releases.
-To prepare a new release the following command must be run.
+Build and test the solution with the .NET 8 SDK:
 
-    nbgv prepare-release
+```sh
+dotnet restore
+dotnet build --no-restore
+dotnet test --no-build
+```
+
+## Releasing
+
+Releases are cut directly from `main` using GitHub Releases:
+
+1. Ensure the commit to release has been merged into `main` and the build is passing.
+2. Create a new GitHub Release targeting that commit.
+3. Give the release a semantic-version tag such as `v2.1.0` or `v2.2.0-beta.1`.
+4. Publish the release.
+
+Publishing the GitHub Release runs the release workflow. It validates that the tag points to a commit on `main`, removes an optional leading `v`, stamps the NuGet package and compiled binaries with that version, verifies the stamped version, and publishes the package to NuGet.
+
+The repository's `NUGET_APIKEY` Actions secret must contain a NuGet API key allowed to publish the `kickflip` package. Draft releases do not publish until they are published, and editing an already-published release does not republish it.
 
