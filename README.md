@@ -90,6 +90,17 @@ Or on a sub-command
 
     kickflip deploy --help
 
+## Testing
+
+Kickflip has an automated test suite covering both unit and integration levels:
+
+- **Unit tests** exercise the individual services (`GitService`, `FileSystemService`, `IgnoreService`, `OutputService`, `PullRequestCommentComposer`, `Utilities`) directly. Git based tests build real temporary git repositories so the find modes are proven end-to-end.
+- **Integration tests** drive the compiled CLI as an external process, verifying command wiring, argument validation, the different deployment modes (`Tags`, `GitHubMergePR`, `Folder`) and that a dry run reports the planned changes without ever connecting to the remote server.
+
+Run the whole suite with:
+
+    dotnet test
+
 ## Development
 
 Kickflip uses [dotnet/Nerdbank.GitVersioning](https://github.com/dotnet/Nerdbank.GitVersioning) to handle semantic versioning and branching to for releases.
