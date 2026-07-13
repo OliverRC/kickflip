@@ -14,15 +14,18 @@ public static class PullRequestCommentComposer
     public const string CommentMarker = "<!-- kickflip-comment -->";
 
     private const string Header = "### 🛹 Kickflip";
-
     private const string DefaultActionName = "default";
+
+    private static readonly Regex SectionRegex = new(
+        @"<!-- kickflip-section:(?<name>.*?) -->(?<content>.*?)<!-- /kickflip-section:\k<name> -->",
+        RegexOptions.Singleline | RegexOptions.Compiled);
 
     /// <summary>
     /// Determines whether the given comment body belongs to kickflip.
     /// </summary>
     public static bool IsKickflipComment(string? body)
     {
-        return body != null && body.Contains(CommentMarker);
+        return body != null && body.Contains(CommentMarker, StringComparison.Ordinal);
     }
 
     /// <summary>
@@ -83,11 +86,7 @@ public static class PullRequestCommentComposer
             return sections;
         }
 
-        var regex = new Regex(
-            @"<!-- kickflip-section:(?<name>.*?) -->(?<content>.*?)<!-- /kickflip-section:\k<name> -->",
-            RegexOptions.Singleline);
-
-        foreach (Match match in regex.Matches(body))
+        foreach (Match match in SectionRegex.Matches(body))
         {
             var name = match.Groups["name"].Value.Trim();
             var content = StripSectionHeading(match.Groups["content"].Value, name).Trim();
@@ -101,8 +100,10 @@ public static class PullRequestCommentComposer
     {
         // Remove the visible heading we add for each section so re-parsing is idempotent.
         var heading = $"#### {name}";
+
         var lines = content.Replace("\r\n", "\n").Split('\n').ToList();
-        lines.RemoveAll(line => line.Trim() == heading);
+        lines.RemoveAll(line => string.Equals(line.Trim(), heading, StringComparison.Ordinal));
+
         return string.Join("\n", lines);
     }
 
