@@ -60,6 +60,8 @@ If you have multiple kickflip flows in the same workflow (for example deploying 
     kickflip github pull-request --repo <owner>/<repo> --ref <ref> --token <token> --action-name staging
     kickflip github pull-request --repo <owner>/<repo> --ref <ref> --token <token> --action-name production
 
+When running inside GitHub Actions, kickflip also writes the deployment change summary to the [job summary](https://github.blog/2022-05-09-supercharging-github-actions-with-job-summaries/) so it appears on the workflow run page. This happens automatically whenever the `GITHUB_STEP_SUMMARY` environment variable is present (which GitHub Actions sets for every step), in addition to posting the pull request comment.
+
 ## Github Actions
 
 Github Actions `actions/checkout@v4` by default performs a shallow clone of the repo. In order for kickflip to work out all the changes it requires that a full clone be made. This can be achieve by:

@@ -230,6 +230,13 @@ namespace kickflip
             }
 
             Console.WriteLine("Github Pull Request Comment Successful!");
+
+            var jobSummaryService = new GithubJobSummaryService(Environment.GetEnvironmentVariable("GITHUB_STEP_SUMMARY"));
+            if (await jobSummaryService.AppendSummaryAsync(sectionContent))
+            {
+                Console.WriteLine("Github Job Summary updated!");
+            }
+
             return (int) ExitCodes.Success;
         }
     }
