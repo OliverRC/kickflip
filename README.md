@@ -47,6 +47,19 @@ You may want to statically upload the contents of a folder. For example maybe th
 
 **Caveat**: To ignore files the `.kickflipignore` file must be present IN the folder.
 
+### Pull request comments
+
+Kickflip can post a summary of the changes that will be deployed as a comment on a pull request:
+
+    kickflip github pull-request --repo <owner>/<repo> --ref <refs/pull/<pr_number>/merge> --token <github-token>
+
+Kickflip reuses a single pull request comment. Each time it runs it updates the existing comment instead of creating a new one.
+
+If you have multiple kickflip flows in the same workflow (for example deploying to staging and production), pass `--action-name` so each flow keeps its own section within the shared comment:
+
+    kickflip github pull-request --repo <owner>/<repo> --ref <ref> --token <token> --action-name staging
+    kickflip github pull-request --repo <owner>/<repo> --ref <ref> --token <token> --action-name production
+
 ## Github Actions
 
 Github Actions `actions/checkout@v4` by default performs a shallow clone of the repo. In order for kickflip to work out all the changes it requires that a full clone be made. This can be achieve by:

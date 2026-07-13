@@ -140,6 +140,12 @@ namespace kickflip
                 "The Github token or Personal access token to use for authentication. See the GITHUB_TOKEN variable in the GitHub Actions documentation. https://docs.github.com/en/actions/security-guides/automatic-token-authentication"
             ) {IsRequired = true};
 
+            var actionNameOption = new Option<string?>(
+                name: "--action-name",
+                description:
+                "The name of the action/flow running kickflip. When multiple kickflip flows run in a workflow they reuse the same pull request comment and each flow's output is kept in its own section identified by this name.",
+                getDefaultValue: () => "default");
+
 
             var pullRequestCommand = new Command("pull-request",
                 "Adds a comment to the pull request with the changes that will be deployed to the remote server.");
@@ -150,7 +156,8 @@ namespace kickflip
             pullRequestCommand.AddOption(repositoryOption);
             pullRequestCommand.AddOption(refOption);
             pullRequestCommand.AddOption(tokenOption);
-            pullRequestCommand.SetHandler(HandleGithubPullRequest!, localPathArgument, findModeOption, deploymentPathOption, repositoryOption, refOption, tokenOption);
+            pullRequestCommand.AddOption(actionNameOption);
+            pullRequestCommand.SetHandler(HandleGithubPullRequest!, localPathArgument, findModeOption, deploymentPathOption, repositoryOption, refOption, tokenOption, actionNameOption);
 
             var githubCommand = new Command("github",
                 "Integration with github to allow kickflip to work in your existing Github workflow.");
@@ -196,7 +203,7 @@ namespace kickflip
         }
 
         private static async Task<int> HandleGithubPullRequest(string localPath, FindMode findMode, string deploymentPath, string repository, string pullRequestReference,
-            string token)
+            string token, string? actionName)
         {
             var ignoreService = new IgnoreService(localPath);
             var gitService = new GitService(ignoreService);
@@ -213,8 +220,8 @@ namespace kickflip
             
             Console.WriteLine(outputService.GetChangesConsole(changes));
             
-            var comments = outputService.GetChangesMarkdown(changes);
-            var result = await gitHubService.PullRequestCommentChanges(repository, pullRequestReference, comments);
+            var sectionContent = outputService.GetChangesMarkdown(changes);
+            var result = await gitHubService.PullRequestCommentChanges(repository, pullRequestReference, sectionContent, actionName);
 
             if (!result)
             {

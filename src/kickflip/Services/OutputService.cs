@@ -17,43 +17,19 @@ public class OutputService
         };
     }
 
-    public string[] GetChangesMarkdown(List<DeploymentChange> changes)
-    {
-        var batches = changes.Chunk(200).ToArray();
-
-        var outputs = new string[batches.Length];
-        for (var i = 0; i < batches.Length; i++)
-        {
-            outputs[i] = GetChangesMarkdown(i, batches[i]);
-        }
-        
-        return outputs;
-    }
-    
-    private string GetChangesMarkdown(int index, DeploymentChange[] changeBatch)
+    public string GetChangesMarkdown(List<DeploymentChange> changes)
     {
         var builder = new StringBuilder();
 
-        if (index == 0)
-        {
-            builder.AppendLine("### 🛹 Kickflip");
-            builder.AppendLine();
-        
-            builder.AppendLine("The following deployment changes are going to be applied");
-            builder.AppendLine();
-        }
-        else
-        {
-            builder.AppendLine("🛹 continuing from previous comment...");
-            builder.AppendLine();
-        }
+        builder.AppendLine("The following deployment changes are going to be applied");
+        builder.AppendLine();
 
         var table = new ConsoleTable("Change", "Action", "Source", "File", "Deployment Path");
-        foreach (var change in changeBatch)
+        foreach (var change in changes)
         {
             table.AddRow(change.Action, GetAction(change), change.Source, change.Path, change.DeploymentPath);
         }
-        
+
         builder.AppendLine(table.ToMarkDownString());
 
         return builder.ToString();
