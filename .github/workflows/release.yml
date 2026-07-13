@@ -6,6 +6,7 @@ on:
 
 permissions:
   contents: read
+  id-token: write
 
 jobs:
   publish:
@@ -66,5 +67,13 @@ jobs:
           exit 1
         fi
 
+    # Request this immediately before publishing: the exchanged API key is
+    # short-lived and the GitHub OIDC token can only be exchanged once.
+    - name: Log in to NuGet with trusted publishing
+      id: nuget-login
+      uses: NuGet/login@v1
+      with:
+        user: ${{ secrets.NUGET_USER }}
+
     - name: Publish to NuGet
-      run: dotnet nuget push "dist/kickflip.${{ steps.version.outputs.version }}.nupkg" --api-key "${{ secrets.NUGET_APIKEY }}" --source https://api.nuget.org/v3/index.json --skip-duplicate
+      run: dotnet nuget push "dist/kickflip.${{ steps.version.outputs.version }}.nupkg" --api-key "${{ steps.nuget-login.outputs.NUGET_API_KEY }}" --source https://api.nuget.org/v3/index.json --skip-duplicate
