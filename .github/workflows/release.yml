@@ -18,6 +18,11 @@ jobs:
         ref: ${{ github.event.release.tag_name }}
         fetch-depth: 0
 
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: '10.0.x'
+
     - name: Validate release tag
       id: version
       shell: bash
@@ -61,7 +66,7 @@ jobs:
         package="dist/kickflip.${VERSION}.nupkg"
         test -f "$package"
 
-        informational_version="$(dotnet exec src/kickflip/bin/Release/net8.0/kickflip.dll --version)"
+        informational_version="$(dotnet exec src/kickflip/bin/Release/net10.0/kickflip.dll --version)"
         if [[ "$informational_version" != "$VERSION" ]]; then
           echo "Binary version '$informational_version' does not match release version '$VERSION'." >&2
           exit 1
