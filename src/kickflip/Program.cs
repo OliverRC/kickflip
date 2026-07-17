@@ -221,7 +221,8 @@ namespace kickflip
             Console.WriteLine(outputService.GetChangesConsole(changes));
             
             var sectionContent = outputService.GetChangesMarkdown(changes);
-            var result = await gitHubService.PullRequestCommentChanges(repository, pullRequestReference, sectionContent, actionName);
+            var sectionName = PullRequestCommentComposer.ResolveSectionName(actionName, deploymentPath);
+            var result = await gitHubService.PullRequestCommentChanges(repository, pullRequestReference, sectionContent, sectionName);
 
             if (!result)
             {

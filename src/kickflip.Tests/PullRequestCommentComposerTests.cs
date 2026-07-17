@@ -84,6 +84,41 @@ public class PullRequestCommentComposerTests
         Assert.Equal(1, CountOccurrences(body, PullRequestCommentComposer.CommentMarker));
     }
 
+    [Fact]
+    public void ResolveSectionName_UsesExplicitActionName_WhenProvided()
+    {
+        Assert.Equal("staging", PullRequestCommentComposer.ResolveSectionName("staging", "/some/path"));
+    }
+
+    [Fact]
+    public void ResolveSectionName_FallsBackToDeploymentPath_WhenNoActionName()
+    {
+        Assert.Equal("/staging", PullRequestCommentComposer.ResolveSectionName(null, "/staging"));
+        Assert.Equal("/production", PullRequestCommentComposer.ResolveSectionName("default", "/production"));
+    }
+
+    [Fact]
+    public void ResolveSectionName_UsesDefault_WhenNoActionNameAndRootPath()
+    {
+        Assert.Equal("default", PullRequestCommentComposer.ResolveSectionName(null, "/"));
+        Assert.Equal("default", PullRequestCommentComposer.ResolveSectionName("default", null));
+    }
+
+    [Fact]
+    public void MultipleDefaultFlows_WithDifferentDeploymentPaths_KeepBothSections()
+    {
+        // Simulates two kickflip integrations in one workflow that don't set --action-name
+        // but deploy to different paths. Both sections must survive.
+        var stagingName = PullRequestCommentComposer.ResolveSectionName(null, "/staging");
+        var productionName = PullRequestCommentComposer.ResolveSectionName(null, "/production");
+
+        var first = PullRequestCommentComposer.Compose(null, stagingName, "staging-content");
+        var second = PullRequestCommentComposer.Compose(first, productionName, "production-content");
+
+        Assert.Contains("staging-content", second);
+        Assert.Contains("production-content", second);
+    }
+
     private static int CountOccurrences(string haystack, string needle)
     {
         var count = 0;
