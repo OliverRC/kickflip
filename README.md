@@ -60,6 +60,8 @@ If you have multiple kickflip flows in the same workflow (for example deploying 
     kickflip github pull-request --repo <owner>/<repo> --ref <ref> --token <token> --action-name staging
     kickflip github pull-request --repo <owner>/<repo> --ref <ref> --token <token> --action-name production
 
+If you don't set `--action-name`, kickflip falls back to the `--deployment-path` to name each section. This means multiple flows deploying to different paths automatically keep their own section and no longer overwrite each other. Only flows sharing the same deployment path (and no explicit action name) will share a section.
+
 When running inside GitHub Actions, kickflip also writes the deployment change summary to the [job summary](https://github.blog/2022-05-09-supercharging-github-actions-with-job-summaries/) so it appears on the workflow run page. This happens automatically whenever the `GITHUB_STEP_SUMMARY` environment variable is present (which GitHub Actions sets for every step), in addition to posting the pull request comment.
 
 ## Github Actions

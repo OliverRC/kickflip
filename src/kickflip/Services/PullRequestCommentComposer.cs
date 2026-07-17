@@ -29,6 +29,33 @@ public static class PullRequestCommentComposer
     }
 
     /// <summary>
+    /// Resolves the section name that a kickflip flow owns within the shared
+    /// comment. When an explicit <paramref name="actionName"/> is provided it is
+    /// used verbatim. Otherwise the <paramref name="deploymentPath"/> is used so
+    /// that multiple flows in the same workflow (for example deploying to
+    /// different paths) keep their own section instead of all colliding on the
+    /// default name and overwriting each other.
+    /// </summary>
+    public static string ResolveSectionName(string? actionName, string? deploymentPath)
+    {
+        if (!string.IsNullOrWhiteSpace(actionName) && actionName.Trim() != DefaultActionName)
+        {
+            return actionName.Trim();
+        }
+
+        if (!string.IsNullOrWhiteSpace(deploymentPath))
+        {
+            var normalized = deploymentPath.Trim();
+            if (normalized != "/")
+            {
+                return normalized;
+            }
+        }
+
+        return DefaultActionName;
+    }
+
+    /// <summary>
     /// Produces the full comment body for a kickflip comment, upserting the
     /// section owned by <paramref name="actionName"/> with <paramref name="sectionContent"/>.
     /// Existing sections owned by other actions are preserved.
