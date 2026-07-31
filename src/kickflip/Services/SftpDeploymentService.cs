@@ -27,8 +27,33 @@ public class SftpDeploymentService
         Console.WriteLine("Connected!");
     }
 
+    /// <summary>
+    /// A deployment must never delete a path it is also uploading to in the same run.
+    /// The final state of the source tree wins: if a path is an upload target, any delete against it is dropped.
+    /// </summary>
+    public static List<DeploymentChange> RemoveConflictingDeletes(List<DeploymentChange> changes)
+    {
+        var uploadTargets = changes
+            .Where(c => c.Action is DeploymentAction.Add or DeploymentAction.Modify or DeploymentAction.AddOrModify)
+            .Select(c => c.DeploymentPath)
+            .ToHashSet();
+
+        return changes.Where(change =>
+        {
+            if (change.Action != DeploymentAction.Delete || !uploadTargets.Contains(change.DeploymentPath))
+            {
+                return true;
+            }
+
+            Console.WriteLine($"Refusing to delete \"{change.DeploymentPath}\" (from \"{change.Path}\") because it is also an upload target in this deployment");
+            return false;
+        }).ToList();
+    }
+
     public bool DeployChanges(string path, List<DeploymentChange> changes, bool isDryRun)
     {
+        changes = RemoveConflictingDeletes(changes);
+
         if (isDryRun)
         {
             Console.WriteLine("Dry run, no changes will be made");
@@ -174,6 +199,13 @@ public class SftpDeploymentService
         try
         {
             _client.Delete(remotePath);
+
+            if (_client.Exists(remotePath))
+            {
+                Console.WriteLine($"Delete verification failed, {deleteOutput} still exists on the remote server");
+                return false;
+            }
+
             Console.WriteLine($"Deleted {deleteOutput}");
             return true;
         }

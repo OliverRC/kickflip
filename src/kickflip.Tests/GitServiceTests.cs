@@ -41,6 +41,36 @@ public class GitServiceTests
         Assert.Equal(DeploymentAction.Delete, changes.Single(c => c.Path == "delete.txt").Action);
     }
 
+    /// <summary>
+    /// Regression test for the rename bug that wiped a deployment: the Delete side
+    /// of a rename must target the OLD deployment path, never the new one that the
+    /// Add side is uploading to.
+    /// </summary>
+    [Fact]
+    public void GetChanges_Tags_RenamedFile_DeletesOldPathAndUploadsNewPath()
+    {
+        using var repo = new GitRepositoryBuilder();
+        var content = "<?php class Account {} // enough content for rename detection";
+        repo.WriteFile("Model/Customer/Account.php", content).Commit("initial");
+        repo.Tag("v1.0");
+
+        repo.DeleteFile("Model/Customer/Account.php").WriteFile("Model/Account.php", content).Commit("move account model");
+
+        var changes = CreateService(repo.Path).GetChanges(repo.Path, "/", FindMode.Tags);
+
+        var add = changes.Single(c => c.Action == DeploymentAction.Add);
+        var delete = changes.Single(c => c.Action == DeploymentAction.Delete);
+
+        Assert.Equal("Model/Account.php", add.Path);
+        Assert.Equal(Path.Combine("/", "Model/Account.php"), add.DeploymentPath);
+
+        Assert.Equal("Model/Customer/Account.php", delete.Path);
+        Assert.Equal(Path.Combine("/", "Model/Customer/Account.php"), delete.DeploymentPath);
+
+        // The incident: the delete pointed at the freshly uploaded file
+        Assert.NotEqual(add.DeploymentPath, delete.DeploymentPath);
+    }
+
     [Fact]
     public void GetChanges_Tags_WithNoTag_ComparesFromRoot()
     {

@@ -189,6 +189,8 @@ namespace kickflip
                 _ => throw new ArgumentOutOfRangeException(nameof(findMode), findMode, null)
             };
 
+            changes = changes.OrderForDeployment();
+
             Console.WriteLine(outputService.GetChangesConsole(changes));
 
             var result = deploymentService.DeployChanges(localPath, changes, isDryRun);
@@ -217,9 +219,11 @@ namespace kickflip
                 FindMode.Folder => fileSystemService.GetChanges(localPath, deploymentPath),
                 _ => throw new ArgumentOutOfRangeException(nameof(findMode), findMode, null)
             };
-            
+
+            changes = changes.OrderForDeployment();
+
             Console.WriteLine(outputService.GetChangesConsole(changes));
-            
+
             var sectionContent = outputService.GetChangesMarkdown(changes);
             var sectionName = PullRequestCommentComposer.ResolveSectionName(actionName, deploymentPath);
             var result = await gitHubService.PullRequestCommentChanges(repository, pullRequestReference, sectionContent, sectionName);

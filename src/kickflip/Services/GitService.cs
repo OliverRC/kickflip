@@ -74,7 +74,7 @@ public class GitService(IgnoreService ignoreService)
                 break;
             case ChangeKind.Renamed:
                 changes.Add(new DeploymentChange(DeploymentAction.Add, Source.Git, change.Path, deploymentPathWithFile));
-                changes.Add(new DeploymentChange(DeploymentAction.Delete, Source.Git, change.OldPath, deploymentPathWithFile));
+                changes.Add(new DeploymentChange(DeploymentAction.Delete, Source.Git, change.OldPath, Path.Combine(deploymentPath, change.OldPath)));
                 break;
             default:
                 throw new ArgumentOutOfRangeException(nameof(change.Status), change.Status, "Currently only Added, Deleted, Modified and Renamed are supported");

@@ -16,6 +16,42 @@ public class SftpDeploymentServiceTests
     private static SftpDeploymentService CreateService() =>
         new("nonexistent.invalid", 22, "user", "password", "/public_html");
 
+    /// <summary>
+    /// The safety net for the rename incident: even if change planning produces a
+    /// delete against a path that is also being uploaded, the delete must be dropped.
+    /// </summary>
+    [Fact]
+    public void RemoveConflictingDeletes_DropsDeleteThatTargetsAnUploadPath()
+    {
+        var changes = new List<DeploymentChange>
+        {
+            new(DeploymentAction.Add, Source.Git, "Model/Account.php", "/Model/Account.php"),
+            new(DeploymentAction.Delete, Source.Git, "Model/Customer/Account.php", "/Model/Account.php"),
+            new(DeploymentAction.Delete, Source.Git, "Model/Old.php", "/Model/Old.php"),
+        };
+
+        var filtered = SftpDeploymentService.RemoveConflictingDeletes(changes);
+
+        Assert.DoesNotContain(filtered, c => c.Action == DeploymentAction.Delete && c.DeploymentPath == "/Model/Account.php");
+        Assert.Contains(filtered, c => c.Action == DeploymentAction.Add && c.DeploymentPath == "/Model/Account.php");
+        Assert.Contains(filtered, c => c.Action == DeploymentAction.Delete && c.DeploymentPath == "/Model/Old.php");
+    }
+
+    [Fact]
+    public void RemoveConflictingDeletes_KeepsUnrelatedChanges()
+    {
+        var changes = new List<DeploymentChange>
+        {
+            new(DeploymentAction.AddOrModify, Source.Folder, "a.txt", "/a.txt"),
+            new(DeploymentAction.Delete, Source.Folder, "b.txt", "/b.txt"),
+            new(DeploymentAction.Ignore, Source.Folder, "c.txt", ""),
+        };
+
+        var filtered = SftpDeploymentService.RemoveConflictingDeletes(changes);
+
+        Assert.Equal(changes, filtered);
+    }
+
     [Fact]
     public void DeployChanges_DryRun_DoesNotConnectAndReportsSuccess()
     {
