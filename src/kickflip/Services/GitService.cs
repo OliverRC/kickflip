@@ -5,7 +5,7 @@ namespace kickflip.Services;
 
 public class GitService(IgnoreService ignoreService)
 {
-    public List<DeploymentChange> GetChanges(string path, string deploymentPath, FindMode findMode)
+    public List<DeploymentChange> GetChanges(string path, string deploymentPath, FindMode findMode, string? baseRef = null)
     {
         // string path = Environment.CurrentDirectory;
         using var repo = new Repository(path);
@@ -22,6 +22,9 @@ public class GitService(IgnoreService ignoreService)
                 break;
             case FindMode.GitHubMergePR:
                 fromCommit = GetLastCommitByGitHubMergePr(repo, true);
+                break;
+            case FindMode.MergeBase:
+                fromCommit = GetMergeBaseCommit(repo, baseRef);
                 break;
             default:
                 throw new ArgumentOutOfRangeException(nameof(findMode), findMode, "Invalid find mode");
@@ -120,9 +123,68 @@ public class GitService(IgnoreService ignoreService)
         return null;
     }
     
+    /// <summary>
+    /// The merge-base between HEAD and <paramref name="baseRef"/> - the commit a pull
+    /// request branched from (or last synced with its base), so the diff is exactly
+    /// the PR's own changes. Unlike GitHubMergePR this does not depend on which
+    /// "Merge pull request" commit happens to be reachable, which breaks down on
+    /// long-lived branches that merge their base in and on parallel PRs.
+    /// The ref is tried as given, then as origin/&lt;ref&gt; (actions/checkout only
+    /// creates remote-tracking branches for the base).
+    /// </summary>
+    private Commit GetMergeBaseCommit(Repository repo, string? baseRef)
+    {
+        if (string.IsNullOrWhiteSpace(baseRef))
+        {
+            throw new InvalidOperationException(
+                "MergeBase mode needs a base ref: pass --base-ref <branch> or set GITHUB_BASE_REF (GitHub sets it for pull_request events).");
+        }
+
+        var baseCommit = repo.Lookup<Commit>(baseRef) ?? repo.Lookup<Commit>($"origin/{baseRef}");
+        if (baseCommit == null)
+        {
+            throw new InvalidOperationException(
+                $"Base ref \"{baseRef}\" not found (tried \"{baseRef}\" and \"origin/{baseRef}\"). Fetch it first - with actions/checkout use fetch-depth: 0.");
+        }
+
+        var mergeBase = repo.ObjectDatabase.FindMergeBase(repo.Head.Tip, baseCommit);
+        if (mergeBase == null)
+        {
+            throw new InvalidOperationException(
+                $"No merge-base between HEAD ({repo.Head.Tip.Sha[..7]}) and \"{baseRef}\" ({baseCommit.Sha[..7]}) - unrelated histories.");
+        }
+
+        Console.WriteLine($"Merge-base of HEAD and \"{baseRef}\": \"{mergeBase.Id} {mergeBase.MessageShort}\"");
+        return mergeBase;
+    }
+
     private Commit? GetLastCommitByGitHubMergePr(Repository repo, bool ignoreTip)
     {
-        var commitsToHead = repo.Head.Commits;
+        // We want the PREVIOUS pull request that was merged into this branch
+        // (e.g. main): that is what the server currently has, so deploy
+        // everything after it.
+        //
+        // FirstParentOnly = walk straight down this branch's own line of merge
+        // commits and ignore the commits inside the branches that got merged in.
+        //
+        // Without it the walk also looks inside merged-in branches, and a PR
+        // that was merged into a FEATURE branch (not into main) can be picked
+        // instead. Example:
+        //
+        //   main:     #124 merged ──────────────── #53 merged (feature lands)
+        //   feature:        \── work ── #146 merged ──/
+        //
+        //   Wanted anchor:  #124 (last PR on main = what staging has)
+        //   Wrong anchor:   #146 (lives inside feature, but is newer by date,
+        //                   so a date-ordered walk finds it first)
+        //
+        // Diffing from #146 re-deploys everything main got after the feature
+        // branched, which does not match the pull request's own file list.
+        var commitsToHead = repo.Commits.QueryBy(new CommitFilter
+        {
+            IncludeReachableFrom = repo.Head,
+            FirstParentOnly = true,
+        });
         foreach (var commit in commitsToHead)
         {
             if (!commit.Message.StartsWith("Merge pull request #", StringComparison.InvariantCultureIgnoreCase) && 

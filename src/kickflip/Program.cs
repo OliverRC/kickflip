@@ -17,6 +17,12 @@ namespace kickflip
             return await rootCommand.InvokeAsync(args);
         }
 
+        static Option<string?> BaseRefOption() => new(
+            name: "--base-ref",
+            description:
+            "Base branch for --mode MergeBase: changes are HEAD vs its merge-base with this ref (tried as given, then origin/<ref>). Defaults to the GITHUB_BASE_REF environment variable, which GitHub Actions sets to the PR's base branch on pull_request events.",
+            getDefaultValue: () => Environment.GetEnvironmentVariable("GITHUB_BASE_REF"));
+
         static Command DeployCommand()
         {
             var pathArgument = new Argument<string?>
@@ -64,11 +70,14 @@ namespace kickflip
                 "Does a dry run of the deployment to see what would be done. No changes will be made to the remote server.",
                 getDefaultValue: () => false);
 
+            var baseRefOption = BaseRefOption();
+
             var deployCommand =
                 new Command("deploy", "Kick your git changes and flip them over to that remote server!");
 
             deployCommand.AddArgument(pathArgument);
             deployCommand.AddOption(findModeOption);
+            deployCommand.AddOption(baseRefOption);
             deployCommand.AddOption(deploymentPathOption);
             deployCommand.AddOption(hostnameOption);
             deployCommand.AddOption(portOption);
@@ -76,8 +85,22 @@ namespace kickflip
             deployCommand.AddOption(passwordOption);
             deployCommand.AddOption(dryRunOption);
 
-            deployCommand.SetHandler(HandleDeployment!, pathArgument, findModeOption, deploymentPathOption, hostnameOption,
-                portOption, usernameOption, passwordOption, dryRunOption);
+            // Nine values - one more than SetHandler's typed overloads take - so
+            // read them off the parse result.
+            deployCommand.SetHandler(async context =>
+            {
+                var r = context.ParseResult;
+                context.ExitCode = await HandleDeployment(
+                    r.GetValueForArgument(pathArgument)!,
+                    r.GetValueForOption(findModeOption),
+                    r.GetValueForOption(baseRefOption),
+                    r.GetValueForOption(deploymentPathOption)!,
+                    r.GetValueForOption(hostnameOption)!,
+                    r.GetValueForOption(portOption),
+                    r.GetValueForOption(usernameOption)!,
+                    r.GetValueForOption(passwordOption)!,
+                    r.GetValueForOption(dryRunOption));
+            });
 
             return deployCommand;
         }
@@ -150,14 +173,17 @@ namespace kickflip
             var pullRequestCommand = new Command("pull-request",
                 "Adds a comment to the pull request with the changes that will be deployed to the remote server.");
             pullRequestCommand.AddAlias("pr");
+            var baseRefOption = BaseRefOption();
+
             pullRequestCommand.AddArgument(localPathArgument);
             pullRequestCommand.AddOption(findModeOption);
+            pullRequestCommand.AddOption(baseRefOption);
             pullRequestCommand.AddOption(deploymentPathOption);
             pullRequestCommand.AddOption(repositoryOption);
             pullRequestCommand.AddOption(refOption);
             pullRequestCommand.AddOption(tokenOption);
             pullRequestCommand.AddOption(actionNameOption);
-            pullRequestCommand.SetHandler(HandleGithubPullRequest!, localPathArgument, findModeOption, deploymentPathOption, repositoryOption, refOption, tokenOption, actionNameOption);
+            pullRequestCommand.SetHandler(HandleGithubPullRequest!, localPathArgument, findModeOption, baseRefOption, deploymentPathOption, repositoryOption, refOption, tokenOption, actionNameOption);
 
             var githubCommand = new Command("github",
                 "Integration with github to allow kickflip to work in your existing Github workflow.");
@@ -166,9 +192,10 @@ namespace kickflip
             return githubCommand;
         }
 
-        static Task<int> HandleDeployment(
+        static async Task<int> HandleDeployment(
             string localPath,
             FindMode findMode,
+            string? baseRef,
             string deploymentPath,
             string hostname,
             int port,
@@ -184,7 +211,7 @@ namespace kickflip
 
             var changes = findMode switch
             {
-                FindMode.Tags or FindMode.GitHubMergePR => gitService.GetChanges(localPath, deploymentPath, findMode),
+                FindMode.Tags or FindMode.GitHubMergePR or FindMode.MergeBase => gitService.GetChanges(localPath, deploymentPath, findMode, baseRef),
                 FindMode.Folder => fileSystemService.GetChanges(localPath, deploymentPath),
                 _ => throw new ArgumentOutOfRangeException(nameof(findMode), findMode, null)
             };
@@ -193,18 +220,26 @@ namespace kickflip
 
             Console.WriteLine(outputService.GetChangesConsole(changes));
 
+            // Same markdown the PR comment gets, so a CD/release run's job summary
+            // can be compared 1:1 with the comment that preceded it.
+            var jobSummaryService = new GithubJobSummaryService(Environment.GetEnvironmentVariable("GITHUB_STEP_SUMMARY"));
+            if (await jobSummaryService.AppendSummaryAsync(outputService.GetChangesMarkdown(changes)))
+            {
+                Console.WriteLine("Github Job Summary updated!");
+            }
+
             var result = deploymentService.DeployChanges(localPath, changes, isDryRun);
             if (!result)
             {
                 Console.WriteLine("Deployment failure. Please check the logs for more information.");
-                return Task.FromResult((int) ExitCodes.FailedWithErrors);
+                return (int) ExitCodes.FailedWithErrors;
             }
 
             Console.WriteLine("Deployment successful!");
-            return Task.FromResult((int) ExitCodes.Success);
+            return (int) ExitCodes.Success;
         }
 
-        private static async Task<int> HandleGithubPullRequest(string localPath, FindMode findMode, string deploymentPath, string repository, string pullRequestReference,
+        private static async Task<int> HandleGithubPullRequest(string localPath, FindMode findMode, string? baseRef, string deploymentPath, string repository, string pullRequestReference,
             string token, string? actionName)
         {
             var ignoreService = new IgnoreService(localPath);
@@ -215,7 +250,7 @@ namespace kickflip
 
             var changes = findMode switch
             {
-                FindMode.Tags or FindMode.GitHubMergePR => gitService.GetChanges(localPath, deploymentPath, findMode),
+                FindMode.Tags or FindMode.GitHubMergePR or FindMode.MergeBase => gitService.GetChanges(localPath, deploymentPath, findMode, baseRef),
                 FindMode.Folder => fileSystemService.GetChanges(localPath, deploymentPath),
                 _ => throw new ArgumentOutOfRangeException(nameof(findMode), findMode, null)
             };
