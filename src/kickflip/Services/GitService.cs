@@ -160,13 +160,26 @@ public class GitService(IgnoreService ignoreService)
 
     private Commit? GetLastCommitByGitHubMergePr(Repository repo, bool ignoreTip)
     {
-        // FIRST-PARENT walk: only the branch's own history counts. Walking every
-        // ancestor (the default) also visits commits that arrived via a merged-in
-        // side branch - a "Merge pull request #N" that was merged INTO a feature
-        // branch, then merged here, can carry a newer timestamp than this branch's
-        // own last PR merge and win the walk, anchoring the diff on a tree that
-        // predates everything this branch gained since. First-parent gives "the
-        // previous PR merged into THIS branch", which is what was last deployed.
+        // We want the PREVIOUS pull request that was merged into this branch
+        // (e.g. main): that is what the server currently has, so deploy
+        // everything after it.
+        //
+        // FirstParentOnly = walk straight down this branch's own line of merge
+        // commits and ignore the commits inside the branches that got merged in.
+        //
+        // Without it the walk also looks inside merged-in branches, and a PR
+        // that was merged into a FEATURE branch (not into main) can be picked
+        // instead. Example:
+        //
+        //   main:     #124 merged ──────────────── #53 merged (feature lands)
+        //   feature:        \── work ── #146 merged ──/
+        //
+        //   Wanted anchor:  #124 (last PR on main = what staging has)
+        //   Wrong anchor:   #146 (lives inside feature, but is newer by date,
+        //                   so a date-ordered walk finds it first)
+        //
+        // Diffing from #146 re-deploys everything main got after the feature
+        // branched, which does not match the pull request's own file list.
         var commitsToHead = repo.Commits.QueryBy(new CommitFilter
         {
             IncludeReachableFrom = repo.Head,
