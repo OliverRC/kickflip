@@ -33,7 +33,7 @@ Or Tags
 
 ### GitHubMergePr
 
-This tries to work out the changes between two PR merges. Useful for rapid deployment scenarios where PR's are used and you don't need to bundle multiple merges together.
+This tries to work out the changes between two PR merges. Useful for rapid deployment scenarios where PR's are used and you don't need to bundle multiple merges together. The previous `Merge pull request #…` commit is looked up along the branch's **first-parent** history only, so PR merges that arrived via a merged-in side branch (e.g. a PR merged into a long-lived feature branch that then lands on `main`) never become the anchor - the result is the same file set a `MergeBase` pull-request comment showed before the merge.
 
     kickflip deploy --mode GitHubMergePr --hostname <ftp-hostname> --port <ftp-port (24)> --username <ftp-username> --password <ftp-password>
 

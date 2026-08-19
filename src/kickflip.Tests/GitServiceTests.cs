@@ -104,6 +104,41 @@ public class GitServiceTests
     /// branch in parallel) must not show up, which is where GitHubMergePR goes
     /// wrong on long-lived branches.
     /// </summary>
+    /// <summary>
+    /// A "Merge pull request" commit that arrived via a merged-in side branch must
+    /// not become the anchor: main's own previous PR merge is what the server has.
+    /// </summary>
+    [Fact]
+    public void GetChanges_GitHubMergePR_IgnoresPrMergesReachableOnlyThroughMergedInBranches()
+    {
+        using var repo = new GitRepositoryBuilder();
+        repo.WriteFile("base.txt").Commit("initial");
+        var main = CurrentBranch(repo.Path);
+
+        // Feature branch gets its own sub-PR merged into it (#146, timestamp: now).
+        repo.Branch("feature").WriteFile("feature.txt").Commit("feature work");
+        repo.Branch("feature-sub").WriteFile("sub.txt").Commit("sub work");
+        repo.Checkout("feature").Merge("feature-sub", "Merge pull request #146 from someone/feature-sub");
+
+        // main merges an unrelated PR (#124) with an OLDER timestamp than #146, so a
+        // date-ordered walk over all ancestors would prefer #146.
+        repo.Checkout(main).WriteFile("on-main.txt").Commit("Merge pull request #124 from someone/other", DateTimeOffset.Now.AddHours(-2));
+
+        // Branch syncs with main (plain merge commit, brings #124 in).
+        repo.Checkout("feature").Merge(main);
+
+        // Feature lands on main via its PR (tip - ignored by the anchor search).
+        repo.Checkout(main).Merge("feature", "Merge pull request #53 from someone/feature");
+
+        var changes = CreateService(repo.Path).GetChanges(repo.Path, "/", FindMode.GitHubMergePR);
+
+        // Anchor = #124 (main's previous PR merge): only the feature branch's files deploy.
+        Assert.Contains(changes, c => c.Path == "feature.txt");
+        Assert.Contains(changes, c => c.Path == "sub.txt");
+        Assert.DoesNotContain(changes, c => c.Path == "on-main.txt");
+        Assert.DoesNotContain(changes, c => c.Path == "base.txt");
+    }
+
     [Fact]
     public void GetChanges_MergeBase_OnlyReportsTheBranchesOwnChanges()
     {

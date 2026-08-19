@@ -160,7 +160,18 @@ public class GitService(IgnoreService ignoreService)
 
     private Commit? GetLastCommitByGitHubMergePr(Repository repo, bool ignoreTip)
     {
-        var commitsToHead = repo.Head.Commits;
+        // FIRST-PARENT walk: only the branch's own history counts. Walking every
+        // ancestor (the default) also visits commits that arrived via a merged-in
+        // side branch - a "Merge pull request #N" that was merged INTO a feature
+        // branch, then merged here, can carry a newer timestamp than this branch's
+        // own last PR merge and win the walk, anchoring the diff on a tree that
+        // predates everything this branch gained since. First-parent gives "the
+        // previous PR merged into THIS branch", which is what was last deployed.
+        var commitsToHead = repo.Commits.QueryBy(new CommitFilter
+        {
+            IncludeReachableFrom = repo.Head,
+            FirstParentOnly = true,
+        });
         foreach (var commit in commitsToHead)
         {
             if (!commit.Message.StartsWith("Merge pull request #", StringComparison.InvariantCultureIgnoreCase) && 

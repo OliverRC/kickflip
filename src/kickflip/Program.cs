@@ -87,10 +87,10 @@ namespace kickflip
 
             // Nine values - one more than SetHandler's typed overloads take - so
             // read them off the parse result.
-            deployCommand.SetHandler(context =>
+            deployCommand.SetHandler(async context =>
             {
                 var r = context.ParseResult;
-                return HandleDeployment(
+                context.ExitCode = await HandleDeployment(
                     r.GetValueForArgument(pathArgument)!,
                     r.GetValueForOption(findModeOption),
                     r.GetValueForOption(baseRefOption),
@@ -99,8 +99,7 @@ namespace kickflip
                     r.GetValueForOption(portOption),
                     r.GetValueForOption(usernameOption)!,
                     r.GetValueForOption(passwordOption)!,
-                    r.GetValueForOption(dryRunOption))
-                    .ContinueWith(t => context.ExitCode = t.Result);
+                    r.GetValueForOption(dryRunOption));
             });
 
             return deployCommand;
@@ -193,7 +192,7 @@ namespace kickflip
             return githubCommand;
         }
 
-        static Task<int> HandleDeployment(
+        static async Task<int> HandleDeployment(
             string localPath,
             FindMode findMode,
             string? baseRef,
@@ -221,15 +220,23 @@ namespace kickflip
 
             Console.WriteLine(outputService.GetChangesConsole(changes));
 
+            // Same markdown the PR comment gets, so a CD/release run's job summary
+            // can be compared 1:1 with the comment that preceded it.
+            var jobSummaryService = new GithubJobSummaryService(Environment.GetEnvironmentVariable("GITHUB_STEP_SUMMARY"));
+            if (await jobSummaryService.AppendSummaryAsync(outputService.GetChangesMarkdown(changes)))
+            {
+                Console.WriteLine("Github Job Summary updated!");
+            }
+
             var result = deploymentService.DeployChanges(localPath, changes, isDryRun);
             if (!result)
             {
                 Console.WriteLine("Deployment failure. Please check the logs for more information.");
-                return Task.FromResult((int) ExitCodes.FailedWithErrors);
+                return (int) ExitCodes.FailedWithErrors;
             }
 
             Console.WriteLine("Deployment successful!");
-            return Task.FromResult((int) ExitCodes.Success);
+            return (int) ExitCodes.Success;
         }
 
         private static async Task<int> HandleGithubPullRequest(string localPath, FindMode findMode, string? baseRef, string deploymentPath, string repository, string pullRequestReference,
