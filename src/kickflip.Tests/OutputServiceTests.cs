@@ -14,6 +14,24 @@ public class OutputServiceTests
     ];
 
     [Fact]
+    public void GetChangesSummary_CountsFilesChangedLikeAPullRequestAndWhatDeploys()
+    {
+        // 1 add + 1 delete + 1 ignored = 3 files changed, 2 to deploy, 1 ignored.
+        Assert.Equal("**3** files changed · **2** to deploy · **1** ignored", OutputService.GetChangesSummary(SampleChanges()));
+
+        // A rename deploys as Add(new) + Delete(old): two paths, so two files here (GitHub shows one).
+        List<DeploymentChange> rename =
+        [
+            new(DeploymentAction.Add, Source.Git, "new.txt", "/new.txt"),
+            new(DeploymentAction.Delete, Source.Git, "old.txt", "/old.txt"),
+        ];
+        Assert.Equal("**2** files changed · **2** to deploy · **0** ignored", OutputService.GetChangesSummary(rename));
+
+        Assert.Equal("**0** files changed · **0** to deploy · **0** ignored", OutputService.GetChangesSummary([]));
+        Assert.Contains(OutputService.GetChangesSummary(SampleChanges()), new OutputService().GetChangesMarkdown(SampleChanges()));
+    }
+
+    [Fact]
     public void GetChangesMarkdown_RendersMarkdownTableWithEveryFile()
     {
         var output = new OutputService().GetChangesMarkdown(SampleChanges());

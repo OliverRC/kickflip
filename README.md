@@ -37,6 +37,15 @@ This tries to work out the changes between two PR merges. Useful for rapid deplo
 
     kickflip deploy --mode GitHubMergePr --hostname <ftp-hostname> --port <ftp-port (24)> --username <ftp-username> --password <ftp-password>
 
+### MergeBase
+
+Diffs `HEAD` against its merge-base with a base branch - exactly the files a pull request changes, the same set GitHub shows on the PR's "Files changed" tab. Unlike `GitHubMergePr` it does not depend on which `Merge pull request #…` commit happens to be reachable, so it stays correct on long-lived branches that merge their base in and when PRs land in parallel. The base comes from `--base-ref <branch>` (tried as given, then `origin/<branch>`) and defaults to `GITHUB_BASE_REF`, which GitHub Actions sets on `pull_request` events - so in a PR workflow you only need the mode:
+
+    kickflip github pull-request --mode MergeBase --repo $GITHUB_REPOSITORY --ref $GITHUB_REF --token $GITHUB_TOKEN
+    kickflip deploy --mode MergeBase --hostname <ftp-hostname> --port <ftp-port (24)> --username <ftp-username> --password <ftp-password>
+
+Requires the base branch to be fetched (`actions/checkout` with `fetch-depth: 0`).
+
 ### Folder 
 
 You may want to statically upload the contents of a folder. For example maybe there is some build assets produced on on your CI/CD server.
@@ -99,7 +108,7 @@ Or on a sub-command
 Kickflip has an automated test suite covering both unit and integration levels:
 
 - **Unit tests** exercise the individual services (`GitService`, `FileSystemService`, `IgnoreService`, `OutputService`, `PullRequestCommentComposer`, `Utilities`) directly. Git based tests build real temporary git repositories so the find modes are proven end-to-end.
-- **Integration tests** drive the compiled CLI as an external process, verifying command wiring, argument validation, the different deployment modes (`Tags`, `GitHubMergePR`, `Folder`) and that a dry run reports the planned changes without ever connecting to the remote server.
+- **Integration tests** drive the compiled CLI as an external process, verifying command wiring, argument validation, the different deployment modes (`Tags`, `GitHubMergePR`, `MergeBase`, `Folder`) and that a dry run reports the planned changes without ever connecting to the remote server.
 
 Run the whole suite with:
 

@@ -5,7 +5,7 @@ namespace kickflip.Services;
 
 public class GitService(IgnoreService ignoreService)
 {
-    public List<DeploymentChange> GetChanges(string path, string deploymentPath, FindMode findMode)
+    public List<DeploymentChange> GetChanges(string path, string deploymentPath, FindMode findMode, string? baseRef = null)
     {
         // string path = Environment.CurrentDirectory;
         using var repo = new Repository(path);
@@ -22,6 +22,9 @@ public class GitService(IgnoreService ignoreService)
                 break;
             case FindMode.GitHubMergePR:
                 fromCommit = GetLastCommitByGitHubMergePr(repo, true);
+                break;
+            case FindMode.MergeBase:
+                fromCommit = GetMergeBaseCommit(repo, baseRef);
                 break;
             default:
                 throw new ArgumentOutOfRangeException(nameof(findMode), findMode, "Invalid find mode");
@@ -120,6 +123,41 @@ public class GitService(IgnoreService ignoreService)
         return null;
     }
     
+    /// <summary>
+    /// The merge-base between HEAD and <paramref name="baseRef"/> - the commit a pull
+    /// request branched from (or last synced with its base), so the diff is exactly
+    /// the PR's own changes. Unlike GitHubMergePR this does not depend on which
+    /// "Merge pull request" commit happens to be reachable, which breaks down on
+    /// long-lived branches that merge their base in and on parallel PRs.
+    /// The ref is tried as given, then as origin/&lt;ref&gt; (actions/checkout only
+    /// creates remote-tracking branches for the base).
+    /// </summary>
+    private Commit GetMergeBaseCommit(Repository repo, string? baseRef)
+    {
+        if (string.IsNullOrWhiteSpace(baseRef))
+        {
+            throw new InvalidOperationException(
+                "MergeBase mode needs a base ref: pass --base-ref <branch> or set GITHUB_BASE_REF (GitHub sets it for pull_request events).");
+        }
+
+        var baseCommit = repo.Lookup<Commit>(baseRef) ?? repo.Lookup<Commit>($"origin/{baseRef}");
+        if (baseCommit == null)
+        {
+            throw new InvalidOperationException(
+                $"Base ref \"{baseRef}\" not found (tried \"{baseRef}\" and \"origin/{baseRef}\"). Fetch it first - with actions/checkout use fetch-depth: 0.");
+        }
+
+        var mergeBase = repo.ObjectDatabase.FindMergeBase(repo.Head.Tip, baseCommit);
+        if (mergeBase == null)
+        {
+            throw new InvalidOperationException(
+                $"No merge-base between HEAD ({repo.Head.Tip.Sha[..7]}) and \"{baseRef}\" ({baseCommit.Sha[..7]}) - unrelated histories.");
+        }
+
+        Console.WriteLine($"Merge-base of HEAD and \"{baseRef}\": \"{mergeBase.Id} {mergeBase.MessageShort}\"");
+        return mergeBase;
+    }
+
     private Commit? GetLastCommitByGitHubMergePr(Repository repo, bool ignoreTip)
     {
         var commitsToHead = repo.Head.Commits;
