@@ -16,6 +16,9 @@ public static class PullRequestCommentComposer
     private const string Header = "### 🛹 Kickflip";
     private const string DefaultActionName = "default";
 
+    // GitHub rejects comment bodies over 65536 characters; keep some headroom.
+    public const int MaxBodyLength = 65000;
+
     private static readonly Regex SectionRegex = new(
         @"<!-- kickflip-section:(?<name>.*?) -->(?<content>.*?)<!-- /kickflip-section:\k<name> -->",
         RegexOptions.Singleline | RegexOptions.Compiled);
@@ -81,6 +84,25 @@ public static class PullRequestCommentComposer
             sections.Add(section);
         }
 
+        var body = Build(sections);
+        if (body.Length <= MaxBodyLength)
+        {
+            return body;
+        }
+
+        // Too big for GitHub: cut this action's section at a line boundary so tables stay valid.
+        var current = sections.Find(s => s.Name == name)!;
+        var notice = $"\n\n_…truncated: too many changes to fit in a PR comment ({current.Content.Length:N0} characters). See the workflow logs or job summary for the full list._";
+        var budget = Math.Max(0, current.Content.Length - (body.Length - MaxBodyLength) - notice.Length);
+        var cut = current.Content.LastIndexOf('\n', Math.Max(0, budget - 1));
+        var truncated = (cut > 0 ? current.Content[..cut] : "") + notice;
+        sections[sections.IndexOf(current)] = current with { Content = truncated };
+
+        return Build(sections);
+    }
+
+    private static string Build(List<Section> sections)
+    {
         var builder = new StringBuilder();
         builder.AppendLine(CommentMarker);
         builder.AppendLine(Header);
