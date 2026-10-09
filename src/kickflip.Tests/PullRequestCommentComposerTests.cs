@@ -1,4 +1,4 @@
-using kickflip.Services;
+﻿using kickflip.Services;
 
 namespace kickflip.Tests;
 
@@ -13,6 +13,22 @@ public class PullRequestCommentComposerTests
         Assert.Contains("### 🛹 Kickflip", body);
         Assert.Contains("content-a", body);
         Assert.True(PullRequestCommentComposer.IsKickflipComment(body));
+    }
+
+    [Fact]
+    public void Compose_OversizedSection_TruncatesAtLineAndKeepsOtherSections()
+    {
+        var rows = string.Join("\n", Enumerable.Range(0, 2000).Select(i => $"| Delete | row-{i} |" + new string(' ', 200) + "|"));
+        var first = PullRequestCommentComposer.Compose(null, "staging", "staging-content");
+        var body = PullRequestCommentComposer.Compose(first, "production", rows);
+
+        Assert.True(body.Length <= PullRequestCommentComposer.MaxBodyLength);
+        Assert.Contains("staging-content", body);
+        Assert.Contains("| Delete | row-0 |", body);
+        Assert.Contains("truncated", body);
+        Assert.DoesNotContain("row-1999", body);
+        // Every table row that survived is whole
+        Assert.All(body.Split('\n').Where(l => l.StartsWith("| Delete")), l => Assert.EndsWith("|", l));
     }
 
     [Fact]
