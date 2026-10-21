@@ -28,6 +28,20 @@ public class IgnoreServiceTests
     }
 
     [Fact]
+    public void IsIgnored_NegatedPatternReincludesFile()
+    {
+        using var directory = new TempDirectory();
+        directory.WriteFile(".kickflipignore", ".*\n!.htaccess\n!.user.ini");
+        var service = new IgnoreService(directory.Path);
+
+        Assert.True(service.IsIgnored(".env"));
+        Assert.False(service.IsIgnored(".htaccess"));
+        Assert.False(service.IsIgnored(".user.ini"));
+        Assert.False(service.IsIgnored("index.php"));
+        Assert.True(service.IsIgnored(".kickflipignore"));
+    }
+
+    [Fact]
     public void IsIgnored_AlwaysIgnoresTheIgnoreFileItself()
     {
         using var directory = new TempDirectory();
