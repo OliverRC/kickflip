@@ -17,8 +17,18 @@ public class IgnoreService
             return;
         }
         
-        var ignorePatterns = File.ReadAllLines(ignoreFile);
-        _matcher.AddIncludePatterns(ignorePatterns);
+        foreach (var pattern in File.ReadAllLines(ignoreFile))
+        {
+            // "!pattern" re-includes files an earlier pattern ignored; unlike .gitignore, order doesn't matter
+            if (pattern.StartsWith('!'))
+            {
+                _matcher.AddExclude(pattern[1..]);
+            }
+            else
+            {
+                _matcher.AddInclude(pattern);
+            }
+        }
     }
     
     public bool IsIgnored(string path)

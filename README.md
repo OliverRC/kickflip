@@ -56,6 +56,15 @@ You may want to statically upload the contents of a folder. For example maybe th
 
 **Caveat**: To ignore files the `.kickflipignore` file must be present IN the folder.
 
+### .kickflipignore
+
+One glob per line. A line starting with `!` re-includes files another pattern ignored, e.g. ignore all dotfiles but still deploy `.htaccess`:
+
+    .*
+    !.htaccess
+
+Unlike `.gitignore`, order doesn't matter: a `!` pattern always wins.
+
 ### Pull request comments
 
 Kickflip can post a summary of the changes that will be deployed as a comment on a pull request:
